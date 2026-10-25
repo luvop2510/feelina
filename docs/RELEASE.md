@@ -3,8 +3,8 @@
 - Primary site: https://feelina.vercel.app
 - Local preview: http://127.0.0.1:5173 while the development server is running.
 - Repository: https://github.com/luvop2510/feelina, branch `main`.
-- Previous application source release: `3f2f93d18e54d5bae7fef5c1bfbf6862a95b017a`.
-- Previous verified Vercel deployment: `dpl_JCPdrXQcMrm83hXMn36V7P6aJCaF`, https://feelina-jcoh67kf5-yug19.vercel.app, production alias applied.
+- Application source release: `212ceff37b104a65f7eb9f123afc554131e1a1d9`.
+- Verified Vercel deployment: `dpl_FWGzMRNJRyktX4iVRo884HrT5zGx`, https://feelina-1m6lbcst7-yug19.vercel.app, production alias applied.
 - Supabase backend: `ttmrywjzmdfjsvuxgmpr`; migrations `20261025100930`, `20261025100931`, `20261025100933`, `20261025101956`, `20261025103812` applied and matched to local filenames.
 - Optional Render static mirror: https://feelina.onrender.com, service `srv-dbetbmvb9u1s73asr2tg`. No Render backend is required for the chosen Vercel + Supabase stack.
 
