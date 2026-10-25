@@ -51,4 +51,12 @@ Browser auth/business requests use isolated fixtures, so no live orders/payments
 
 ## Release
 
-Supabase migration is applied and local/remote history matches. GitHub push, Vercel deployment and production checks are recorded below after release.
+- Application commit: `ec43902fa7fbf560c073c61500c09f378da8d038`, pushed to `origin/main` and verified against the remote ref.
+- GitHub CI: [run 40204318337](https://github.com/luvop2510/feelina/actions/runs/40204318337) completed successfully, including all 64 tests, build and dependency audit.
+- Vercel production: `dpl_Dvr3FoWVh5jc9MhMBXiMGv1hu4AS`, Ready, aliased to https://feelina.vercel.app. Live JS asset `/assets/index-lnLLA8qC.js` matches the local final build.
+- Supabase: all six migrations match local/remote history. Direct read confirms the approved eight-size labels.
+- Eight additional browser checks passed against the production URL with isolated Auth/Data requests: delayed profile, retry, profile disclosure/logout, pending gate, all eight screens at 320/390px, keyboard drawer and image/action spacing.
+- Production login screenshot confirms the actual logo loads and there is no sample-entry button. No real credentials or business records were used in these final browser checks.
+- PDF text extraction found all ROW001–ROW100 markers, the final total and end marker in the long-order artifact. The one-page PDF and rendered preview are retained in the task visualization folder.
+
+This documentation-only follow-up does not change the deployed application assets.

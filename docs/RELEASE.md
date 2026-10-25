@@ -16,3 +16,7 @@ CI browser tests use a clearly synthetic Supabase URL/key and intercept OAuth re
 
 
 The account-management release provisions the three explicitly designated owners and adds Settings → Accounts → Create user, username/category management and a server-enforced initial password replacement flow. Hosted disposable-account tests cover the deployed Auth/Edge/RLS workflow, including role escalation denial and suspended creation retries; all test identities/customer records were removed. Three independent rounds of hosted stock/payment contention also passed. See `ACCOUNT_MANAGEMENT.md` and `ACCEPTANCE.md`.
+
+## Superior rebrand and mobile improvements, 25 October 2026
+
+Application commit `ec43902` is deployed to https://feelina.vercel.app as `dpl_Dvr3FoWVh5jc9MhMBXiMGv1hu4AS`. Supabase migration `20261025130000_correct_size_chart.sql` is applied. GitHub run 40204318337 passed all 64 automated checks; eight additional production browser checks passed using isolated API fixtures. See [rebrand verification](REBRAND-VERIFICATION.md) for the requirement audit, PDF evidence, mobile layout review and testing limits.
