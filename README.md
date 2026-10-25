@@ -1,5 +1,7 @@
 # Feelina
 
+Live: [feelina.vercel.app](https://feelina.vercel.app). Backend: Supabase project `ttmrywjzmdfjsvuxgmpr`. Render is an optional static mirror; no separate Render backend is required.
+
 A retailer ordering and internal operations workspace for Feelina. React/TypeScript on Vercel, Supabase Auth and PostgreSQL for authoritative business data. The central order form is an eight-size matrix, with separate MRP and selling rates, server-calculated totals and A4 printing.
 
 ## Run
@@ -35,9 +37,13 @@ Supply the owner email, verified business details and the reference invoice; con
 
 `npm run build` emits `dist`. Vercel settings and security headers live in `vercel.json`. Set the two public Supabase variables in the deployment environment and set `VITE_SUPABASE_READY=true` only after applying and verifying the migration. Until then live sign-in stays gated and the read-only sample remains accessible. The database is independent of web deployments and is not reset when the site is redeployed. Configure Supabase Auth site URL and approved redirect URLs to the final company domain before email confirmation/recovery is used.
 
+## Google login
+
+“Continue with Google” is available on login and partner registration. The client uses Supabase OAuth with PKCE. Google provider credentials are intentionally deferred by the user; Google authentication is not active until these are added. See [Google login setup and checks](docs/AUTH.md). New Google users receive pending retailer access and require approval.
+
 ## Recovery
 
-`BACKUP_DIR=/secure/path DATABASE_URL=... scripts/backup.sh` creates a restricted-permission PostgreSQL custom archive and checksum. It includes sensitive Auth records: encrypt it and copy it to company-controlled off-site storage. See the operations runbook for isolated restore prerequisites and cloud verification status. Never commit backup files or database credentials.
+Set `FEELINA_PROJECT_REF`, `DATABASE_URL` and `BACKUP_DIR` securely, then run `scripts/backup.sh`. It creates a restricted-permission Supabase logical dump set, auth-trigger definitions, reconciliation summary and checksums. It includes sensitive Auth records: encrypt it and copy it to company-controlled off-site storage. See the operations runbook for isolated restore prerequisites and cloud verification status. Never commit backup files or database credentials.
 
 ## Sources used for implementation decisions
 

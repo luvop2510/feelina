@@ -7,13 +7,22 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { configured, supabase } from "../lib/api";
+import { configured, supabase, googleSignInUrl } from "../lib/api";
 import { Field, ErrorMessage, Submit } from "./ui";
 export function Auth({ onSample }: { onSample: () => void }) {
   const [mode, setMode] = useState<"login" | "register" | "reset">("login");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(() => {
+    const query = new URLSearchParams(location.search);
+    const hash = new URLSearchParams(location.hash.slice(1));
+    return (
+      query.get("error_description") ||
+      hash.get("error_description") ||
+      ""
+    ).slice(0, 400);
+  });
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
   const [show, setShow] = useState(false);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -118,6 +127,37 @@ export function Auth({ onSample }: { onSample: () => void }) {
                 ? "Tell us a little about yourself. Our team reviews every partner account."
                 : "We’ll send a secure reset link to your email."}
           </p>
+          {mode !== "reset" && (
+            <>
+              <button
+                type="button"
+                className="button secondary full google-signin"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setGoogleBusy(true);
+                  setError("");
+                  setMessage("");
+                  try {
+                    window.location.assign(await googleSignInUrl());
+                  } catch (e) {
+                    setError(
+                      (e as Error).name === "TimeoutError"
+                        ? "Google sign-in took too long. Try again or sign in with email."
+                        : (e as Error).message,
+                    );
+                    setBusy(false);
+                    setGoogleBusy(false);
+                  }
+                }}
+              >
+                {googleBusy ? "Connecting…" : "Continue with Google"}
+              </button>
+              <div className="auth-divider">
+                <span>or continue with email</span>
+              </div>
+            </>
+          )}
           <form onSubmit={submit}>
             {mode === "register" && (
               <Field label="Full name">

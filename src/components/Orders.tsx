@@ -881,6 +881,7 @@ export function OrderDetail({ id }: { id: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [cancel, setCancel] = useState(false);
+  const [transport, setTransport] = useState(false);
   const [stockAction, setStockAction] = useState<"dispatch" | "return" | null>(
     null,
   );
@@ -896,8 +897,12 @@ export function OrderDetail({ id }: { id: string }) {
   const invoice = data.invoices.find((i) => i.order_id === id);
   const lines: OrderLine[] =
     documentType === "invoice" && invoice
-      ? invoice.snapshot.lines
-      : data.order_lines.filter((l) => l.order_id === id);
+      ? [...invoice.snapshot.lines].sort(
+          (a, b) => (a.position || 1) - (b.position || 1),
+        )
+      : data.order_lines
+          .filter((l) => l.order_id === id)
+          .sort((a, b) => (a.position || 1) - (b.position || 1));
   const next: Record<string, string> = {
     draft: "submitted",
     submitted: "confirmed",
@@ -921,8 +926,10 @@ export function OrderDetail({ id }: { id: string }) {
       await fn();
       await reload();
       notify(message);
+      return true;
     } catch (e) {
       setError((e as Error).message);
+      return false;
     } finally {
       setBusy(false);
       setCancel(false);
@@ -1307,6 +1314,80 @@ export function OrderDetail({ id }: { id: string }) {
             </button>
           )}
       </div>
+      {can(["owner", "admin", "fulfilment"]) &&
+        ["confirmed", "processing", "packed", "dispatched"].includes(
+          order.status,
+        ) && (
+          <div className="no-print detail-actions">
+            <button
+              className="button secondary"
+              onClick={() => setTransport(true)}
+            >
+              Update transporter / LR
+            </button>
+          </div>
+        )}
+      {transport && (
+        <Modal
+          title="Update transport details"
+          onClose={() => setTransport(false)}
+        >
+          <form
+            onSubmit={async (e) => {
+              e.preventDefault();
+              const details = Object.fromEntries(new FormData(e.currentTarget));
+              const saved = await mutate(
+                () =>
+                  rpc("update_dispatch_details", {
+                    p_order_id: id,
+                    p_details: details,
+                  }),
+                "Transport details updated.",
+              );
+              if (saved) setTransport(false);
+            }}
+          >
+            <Field label="Transporter">
+              <input
+                name="transporter"
+                maxLength={200}
+                defaultValue={order.transporter}
+              />
+            </Field>
+            <Field label="LR number">
+              <input
+                name="lr_number"
+                maxLength={100}
+                defaultValue={order.lr_number}
+              />
+            </Field>
+            <Field label="LR date">
+              <input
+                type="date"
+                name="lr_date"
+                min={order.order_date}
+                defaultValue={order.lr_date || ""}
+              />
+            </Field>
+            <Field label="Dispatch details">
+              <textarea
+                name="dispatch_details"
+                maxLength={2000}
+                defaultValue={order.dispatch_details}
+              />
+            </Field>
+            <ErrorMessage error={error} />
+            <div className="modal-actions">
+              <Submit busy={busy}>Save transport details</Submit>
+            </div>
+          </form>
+        </Modal>
+      )}
+      {order.exchange_return_id && (
+        <p className="info-note no-print">
+          Exchange replacement linked to return {order.exchange_return_id}.
+        </p>
+      )}
       <FulfilmentHistory order={order} />
       {can(["owner", "admin", "sales", "accounts", "fulfilment"]) && (
         <InternalNotes orderId={id} />
@@ -1640,7 +1721,9 @@ function InternalNotes({ orderId }: { orderId: string }) {
 }
 
 function FulfilmentHistory({ order }: { order: Order }) {
-  const { data } = useApp();
+  const { data, sample, can, reload, navigate } = useApp();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const shipments = data.order_fulfilments.filter(
     (f) => f.order_id === order.id,
   );
@@ -1724,10 +1807,48 @@ function FulfilmentHistory({ order }: { order: Order }) {
           · {s.details || "No dispatch reference"}
         </p>
       ))}
+      <ErrorMessage error={error} />
       {returns.map((r) => (
         <p key={r.id}>
           <strong>{date(r.created_at)}</strong> · Return credit{" "}
           {money(r.credit_paise)} · {r.note}
+          {data.orders.find((o) => o.exchange_return_id === r.id) ? (
+            <button
+              className="text-button"
+              onClick={() =>
+                navigate(
+                  "orders/" +
+                    data.orders.find((o) => o.exchange_return_id === r.id)!.id,
+                )
+              }
+            >
+              View exchange order
+            </button>
+          ) : (
+            can(["owner", "admin", "sales"]) && (
+              <button
+                className="text-button"
+                disabled={sample || busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setError("");
+                  try {
+                    const newId = await rpc("create_exchange_order", {
+                      p_return_id: r.id,
+                    });
+                    await reload();
+                    navigate("orders/" + newId + "/edit");
+                  } catch (e) {
+                    setError((e as Error).message);
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                Create exchange order
+              </button>
+            )
+          )}
         </p>
       ))}
     </section>

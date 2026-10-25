@@ -7,7 +7,49 @@ const key =
 export const configured = Boolean(
   url && key && import.meta.env.VITE_SUPABASE_READY === "true",
 );
-export const supabase = configured ? createClient(url, key) : null;
+export const supabase = configured
+  ? createClient(url, key, {
+      auth: {
+        flowType: "pkce",
+        detectSessionInUrl: true,
+        persistSession: true,
+        autoRefreshToken: true,
+      },
+    })
+  : null;
+export async function googleSignInUrl() {
+  if (!supabase)
+    throw new Error(
+      "Secure sign-in is not configured. Contact the Feelina administrator.",
+    );
+  const response = await fetch(new URL("/auth/v1/settings", url), {
+    headers: { apikey: key },
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok)
+    throw new Error(
+      "Unable to check Google sign-in. Try again or sign in with email.",
+    );
+  const settings = await response.json();
+  if (!settings.external?.google)
+    throw new Error(
+      "Google sign-in is awaiting provider setup. You can sign in with email, or ask the Feelina administrator to enable Google sign-in.",
+    );
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: window.location.origin + "/",
+      skipBrowserRedirect: true,
+      queryParams: { prompt: "select_account" },
+    },
+  });
+  if (error) throw error;
+  if (!data.url || new URL(data.url).origin !== new URL(url).origin)
+    throw new Error(
+      "Google sign-in returned an invalid login destination. Try again.",
+    );
+  return data.url;
+}
 export async function rpc(name: string, args: Record<string, unknown> = {}) {
   if (!supabase)
     throw new Error(
@@ -72,7 +114,9 @@ export async function loadWorkspace(): Promise<Workspace> {
   if (!supabase) throw new Error("Database configuration is missing.");
   const {
     data: { session },
+    error: sessionError,
   } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
   if (!session) return { ...emptyWorkspace };
   const {
     data: { user },
@@ -114,7 +158,9 @@ export async function loadWorkspace(): Promise<Workspace> {
         query =
           name === "price_list_items"
             ? query.order("price_list_id").order("product_id")
-            : query.order("id");
+            : name === "order_lines"
+              ? query.order("order_id").order("position").order("id")
+              : query.order("id");
         const { data, error } = await query.range(start, start + 999);
         if (error) throw new Error(`${name}: ${error.message}`);
         rows.push(...data);

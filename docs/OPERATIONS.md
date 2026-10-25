@@ -4,7 +4,7 @@ This runbook is for the company administrator and its next developer. It is not 
 
 ## Provisioned project record
 
-The user-selected Supabase project is `ttmrywjzmdfjsvuxgmpr`, owned by the browser account `worldyashvardhan@gmail.com`, region Seoul (`ap-northeast-2`). Use this exact project for production. The Vercel project is `feelina`, ID `prj_Wg2uLGT3CLQjCXHqMlPoNb0kn9tA`, under the existing `yug19` team. `render.yaml` describes a dedicated Render static deployment using the same Supabase backend. The earlier provisioned projects `nyjvoxaffvmhcqefqtoq` and `kxjoqrrxwtoxkkjesdnc` are superseded, have no business records and are not deployment targets. Do not delete them without confirming the owning account and explicit cleanup authorization.
+The user-selected Supabase project is `ttmrywjzmdfjsvuxgmpr`, owned by the browser account `worldyashvardhan@gmail.com`, region Seoul (`ap-northeast-2`). Use this exact project for production. The Vercel project is `feelina`, ID `prj_Wg2uLGT3CLQjCXHqMlPoNb0kn9tA`, under the existing `yug19` team. The primary site is https://feelina.vercel.app. Supabase hosts the backend directly; no Render backend is needed. An existing optional Render static mirror at https://feelina.onrender.com uses the same database; `render.yaml` describes that mirror. The earlier provisioned projects `nyjvoxaffvmhcqefqtoq` and `kxjoqrrxwtoxkkjesdnc` are superseded, have no business records and are not deployment targets. Do not delete them without confirming the owning account and explicit cleanup authorization.
 
 Record the final production URL, deployed commit, applied migration and cloud verification output in the release handover. The initial owner email remains intentionally unassigned until the user supplies it.
 
@@ -15,7 +15,7 @@ Record the final production URL, deployed commit, applied migration and cloud ve
 3. Enter the verified legal name, address, tax registration/configuration, payment terms and bank details. A company representative must review them before marking them verified.
 4. Compare the order form with the original paper invoice. Verify every size label, transport field, totals block and A4 pagination. No reference invoice was available during initial specification.
 5. Load the real catalogue, variant stock, price lists and customers. Reconcile opening stock with a signed count. Never import the sample workspace as real records.
-6. Configure and test email verification, password reset and allowed production redirects. Confirm signup can reach a real recipient and pending users cannot order.
+6. Configure and test email verification, password reset, Google OAuth and allowed production redirects (see `docs/AUTH.md`). Confirm signup can reach a real recipient and pending users cannot order.
 7. Complete the role/stock/payment/print checks in `docs/ACCEPTANCE.md` and an isolated restore drill below.
 
 ## Local development

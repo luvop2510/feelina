@@ -1,68 +1,36 @@
-# Feelina acceptance record
+# Feelina release acceptance record
 
-Updated 25 October 2026. A public URL is separate from approval to operate on real financial records. **Implemented** means code inspected; **verified locally** means the named local check passed; **pending** means evidence is still needed. The release coordinator should append deployed evidence rather than replacing these limits with a blanket completion claim.
+Updated 25 October 2026. Primary site: https://feelina.vercel.app. Source: https://github.com/luvop2510/feelina. Backend: Supabase `ttmrywjzmdfjsvuxgmpr`. Render is an optional static mirror, not a required backend service.
 
-## Evidence collected
+## Verified evidence
 
-The release coordinator reported a passing TypeScript/production build, 17 automated tests, and four Playwright tests. The test source was independently inspected. The automated suite contains eight token-contrast checks and nine PostgreSQL/PGlite scenarios. Browser tests run the read-only sample workspace; they do not demonstrate authenticated cloud writes.
-
-| Check | Evidence and scope |
+| Check | Result and scope |
 |---|---|
-| TypeScript and production bundle | `npm run build` reported passed; includes `tsc -b` |
-| Local database/business rules | `npm test`: 17 tests reported passed, including 9 PGlite database scenarios |
-| Desktop sample journey | `tests/browser/workspace.spec.ts`: routes, search, matrix quantity calculation, sample write denial, no page errors |
-| Small screen | Same browser suite: 375px navigation/matrix and no document-level horizontal overflow |
-| Accessibility | Same suite: axe checks on eight main sample routes in light/dark with reduced motion; no reported violations |
-| Printing | Browser generated `test-results/sample-order.pdf` in A4 and checked sidebar hidden; this is not a multi-page original-invoice comparison |
-| Local recovery | PGlite data-directory dump/reload retains order count, one payment and stock; this is not a Supabase/off-site restore drill |
-| Review | `tests/security-review.md` records concrete findings and their resolution state |
+| Production build | `npm run build` passes TypeScript and Vite compilation. |
+| Automated business/design checks | `npm test`: 28 passing tests: 20 PostgreSQL/PGlite scenarios and 8 contrast checks. |
+| Browser checks | 7 passing Playwright tests: desktop sample journey, 375px matrix, axe on all eight routes in light/dark, dirty navigation cancellation, Google disabled-provider recovery and PKCE redirect parameters. |
+| Cloud migrations | Four migrations applied, through `20261025101956_fulfilment_details_and_exchange_links.sql`; filenames match Supabase's migration history. |
+| Real authenticated cloud journey | Disposable owner/retailer identities: email login, catalogue selection, inline customer retaining quantities, server-priced draft, reload persistence, submission, unverified-business confirmation denied, retailer own-order access, forbidden stock mutation, suspended access denied with existing token, sign-out. `tests/cloud-live.mjs` preserves the manual test procedure; all fixture records/accounts were removed. |
+| Cloud SQL negative checks | `tests/cloud-smoke.sql` executed in a rolled-back transaction: pending signup/no escalation, retailer scope, direct-write denial and authoritative prices. |
+| Security advisor | Final query reports 15 intentionally exposed authenticated SECURITY DEFINER RPCs, each with role/status checks and fixed search paths. No other security lint returned. See `tests/security-review.md`. |
+| Recovery | Embedded database dump/reload retains orders, payments and stock. Supabase logical backup/restore helpers and runbook exist; a company-controlled off-site restore is still untested. |
+| Print | Sample A4 PDF generated and print-only chrome checked. Original invoice and multi-page business sign-off remain outstanding. |
 
-PGlite emulates the Supabase auth schema/roles. Its single connection does not prove two-session transaction races, real auth token behavior, provider configuration, network failures or live email delivery. Axe does not replace keyboard/screen-reader evaluation and does not cover every modal/state automatically.
+PGlite uses emulated Supabase auth/storage and a single database connection. Queued-request tests do not establish two independent cloud-session race behavior. Browser sample tests do not prove every authenticated modal, screen-reader behavior or email delivery. The cloud journey used the prior release UI; later transport/exchange/Google changes have local automated checks and require operational acceptance with the business.
 
-## Business acceptance matrix
+## Implemented behavior
 
-| Requirement | Implementation evidence | Remaining acceptance |
-|---|---|---|
-| Product selection | Searchable catalogue picker, product-colour lines; sample matrix tested | Authenticated create/edit with real catalogue |
-| Size matrix | Specified eight numeric size columns and MRP/rate/quantity/amount; configurable labels | Original paper invoice absent; exact fidelity and mapping blocked |
-| Correct amounts | Server recomputes prices, discounts and tax; negative quantity/tampered price tests | Safe monetary upper bound, per-transaction tax policy, deployed tests |
-| Retailer pricing | Customer-assigned price lists and RLS; isolated retailer tests | Live two-retailer auth test and correct catalogue display for staff |
-| Durable orders | PostgreSQL persistence, draft RPC, local backup/reload test | Save/sign-out/sign-in/reopen against live database |
-| Stock | Atomic reserve/dispatch/release, partial shipment tables; oversell/idempotent-confirm tests | Two independent cloud sessions, failed-request retry safety, usable shipment history |
-| Payments/balances | Server overpayment rejection and idempotent request IDs tested | All UI/export balances account for credits; visible refunds owed; cloud retry test |
-| A4/PDF | Print-only order layout and browser Save PDF | Long product names, many-page document, original invoice comparison |
-| Separate tax invoice | Separate sequence, immutable DB snapshot, verified-settings gate | Render only invoice snapshot with issue date; transaction tax configuration and business review |
-| Access/security | Explicit RLS, RPC guards, direct-write denial; pending/retailer/last-owner tests | All seven roles, suspended/revoked tokens and live API negative tests |
-| Backup/recovery | Procedure written; isolated embedded DB recovery test | Company-controlled encrypted off-site backup and real Supabase restore drill |
-| Ownership | Repository and hosting provisioned through connected user accounts | Confirmed company owner, accepted company admin memberships and handover |
+Server pricing, bounded integer-paise totals, per-order GST supply-state treatment, atomic reservation/partial dispatch/cancellation/returns, stable operation IDs, immutable invoice snapshots and last-owner protection are tested locally. Retailer/customer pricing, role separation, internal notes and public product-image storage with administrator-only writes have dedicated scenarios. Draft line positions, audited late transport updates and a single linked replacement draft per return are covered by the latest migration tests.
 
-## Functional coverage and open work
+The UI includes catalogue/customer maintenance, image uploads, eight-size order matrix, drafts/duplicates, retained unsaved quantities, shipment/return history, staff notes, transport updates, exchange links, price-list editing, payment records, refund-credit visibility, audit views and CSV/print reports. Returns record credit; they do not send money. Cash refund recording/reconciliation is not yet implemented, and paid-order cancellation is blocked.
 
-| Area | Current state / material gap |
-|---|---|
-| Auth | Sign-in, registration, reset and pending-account screen implemented. Real verification/reset delivery not yet evidenced. |
-| Staff accounts | Role/status/customer assignment UI and server restrictions implemented. Initial owner email deliberately deferred by user. |
-| Catalogue | Product create/edit, active status, HTTPS image URL and variant opening stock implemented. No file-upload/storage service; images are external references. |
-| Customer records | Create/edit and assigned price/credit terms implemented. Inline customer creation retains matrix component state; live flow needs verification. |
-| Draft/duplicate | Save/edit/duplicate code exists. Review identified navigation-before-reload and retry-after-partial-save defects; resolution tracked in review record. |
-| Transport | Transporter, LR/date and dispatch details captured. Post-submission transport editing needs a deliberate audited path; draft-only edit cannot handle a late LR assignment. |
-| Partial fulfilment | Database records quantity-level shipments and protects remaining reservations. UI initially lacked remaining-quantity/history reads and partial-return access. |
-| Returns/exchanges | Server caps returns and computes cumulative credits. Exchange is documented as return plus new replacement order; explicit linkage/reconciliation UI is not established. |
-| Refunds | Returns create accounting credit, not a cash transfer. No refund-entry workflow exists; paid-order cancellation remains blocked. Refunds owed must be visible, not clamped away. |
-| Internal notes | Separate staff-only table/RPC exists; initial UI did not load/display/add these. General order notes are customer-visible. |
-| Price-list maintenance | Create and assignment implemented. Initial settings screen lacks editing an existing list despite server upsert support. |
-| Reports | Date/customer order reports, product-size lines and movement export implemented. Initial movement report ignored selected customer. No native XLSX export; CSV is clearly named. |
-| Audit | Append-only application audit and stock movements implemented. Audit UI shows action/actor/entity; live reconciliation and complete staff role coverage pending. |
-| Data scale | Initial silent 1,000-row cap replaced by pagination. Full workspace loading remains unsuitable for very large histories; add query-level paging/aggregation when operational volumes require it. |
-| Error recovery | Visible errors and busy states implemented. Source review found some successful mutations followed by failed reload may be presented as save failure; retry behavior needs explicit outcome handling. |
+## Pending activation and acceptance
 
-These are implementation observations, not permission to waive requirements. The release coordinator updates entries after fixes and checks. Do not describe advanced modules as fully accepted while their material gaps remain.
+- **Google credentials:** deferred by user. The option is visible and code paths are tested, but real Google login is inactive until the provider is configured and its full callback tested. See `docs/AUTH.md`.
+- **Business identity:** owner email, verified company/tax/payment details and original invoice remain deliberately deferred. No permanent owner was invented; statutory confirmation/issuance stays gated.
+- **Real data and review:** load actual catalogue, prices, customers and reconciled opening stock; approve tax treatment and multi-page print fidelity.
+- **Email:** verify signup and password reset with a real controlled recipient and production sender configuration.
+- **Operations:** conduct two-session cloud stock/payment contention checks, encrypted off-site backup/isolated Supabase restore, recovery timing, and company administrator handover.
+- **Scale:** full-table loading is paginated beyond the API's 1,000-row default, but large histories still need server-side report aggregation and query-level paging.
 
-## Activation gates awaiting the business
-
-- Confirm the initial owner email and grant that exact verified account owner access through trusted administration.
-- Supply verified legal name, address, GST and bank/UPI details; review the correct tax treatment with the business's accountant.
-- Supply the original paper invoice and verify the size labels and printed structure.
-- Load actual products, prices, customers and opening stock, and reconcile them before taking orders.
-- Accept company-controlled GitHub, Supabase, Vercel, domain and backup administrator access.
-- Complete cloud authentication/persistence/concurrency checks and an isolated off-site restore drill before operational sign-off.
+A live URL and successful checks establish the tested scope above. They do not establish complete operational or statutory acceptance.

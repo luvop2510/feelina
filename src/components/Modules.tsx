@@ -1037,7 +1037,11 @@ export function Reports() {
             .filter(
               (x) =>
                 (!from || x.created_at.slice(0, 10) >= from) &&
-                (!to || x.created_at.slice(0, 10) <= to),
+                (!to || x.created_at.slice(0, 10) <= to) &&
+                (!customer ||
+                  data.orders.some(
+                    (o) => o.id === x.order_id && o.customer_id === customer,
+                  )),
             )
             .map((x) => ({
               Date: date(x.created_at),
@@ -1148,6 +1152,7 @@ export function SettingsPage() {
   const [tab, setTab] = useState("business");
   const [account, setAccount] = useState<Row | null>(null);
   const [price, setPrice] = useState(false);
+  const [priceEdit, setPriceEdit] = useState<Row | null>(null);
   const m = useMutation();
   const cfg = data.settings;
   return (
@@ -1209,8 +1214,12 @@ export function SettingsPage() {
             <Field label="Tax treatment">
               <select name="tax_mode" defaultValue={cfg?.tax_mode || "none"}>
                 <option value="none">Not configured / no GST</option>
-                <option value="cgst_sgst">CGST + SGST</option>
-                <option value="igst">IGST</option>
+                <option value="cgst_sgst">
+                  GST enabled · derive CGST/SGST or IGST by supply state
+                </option>
+                <option value="igst">
+                  GST enabled · existing IGST setting (derived per order)
+                </option>
               </select>
             </Field>
             <Field label="Total GST rate (%)">
@@ -1313,7 +1322,13 @@ export function SettingsPage() {
         <section className="panel form-panel">
           <div className="panel-header">
             <h2>Customer price lists</h2>
-            <button className="button secondary" onClick={() => setPrice(true)}>
+            <button
+              className="button secondary"
+              onClick={() => {
+                setPriceEdit(null);
+                setPrice(true);
+              }}
+            >
               <Plus size={16} />
               New price list
             </button>
@@ -1321,6 +1336,15 @@ export function SettingsPage() {
           {data.price_lists.map((p) => (
             <div className="price-list" key={p.id}>
               <h3>{p.name}</h3>
+              <button
+                className="text-button"
+                onClick={() => {
+                  setPriceEdit(p);
+                  setPrice(true);
+                }}
+              >
+                Edit price list
+              </button>
               {data.price_list_items
                 .filter((i) => i.price_list_id === p.id)
                 .map((i) => (
@@ -1425,7 +1449,10 @@ export function SettingsPage() {
         </Modal>
       )}
       {price && (
-        <Modal title="Create price list" onClose={() => setPrice(false)}>
+        <Modal
+          title={priceEdit ? "Edit price list" : "Create price list"}
+          onClose={() => setPrice(false)}
+        >
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -1434,6 +1461,7 @@ export function SettingsPage() {
                 () =>
                   rpc("save_price_list", {
                     payload: {
+                      id: priceEdit?.id,
                       name: f.name,
                       items: data.products
                         .filter((p) => f[p.id] !== "")
@@ -1443,18 +1471,38 @@ export function SettingsPage() {
                         })),
                     },
                   }),
-                "Price list created.",
+                "Price list saved.",
                 () => setPrice(false),
               );
             }}
           >
             <Field label="Price list name">
-              <input name="name" required />
+              <input name="name" required defaultValue={priceEdit?.name} />
             </Field>
             <p>Leave a product rate blank to use its standard selling rate.</p>
             {data.products.map((p) => (
               <Field key={p.id} label={p.name + " (₹)"}>
-                <input name={p.id} type="number" min={0} step="0.01" />
+                <input
+                  name={p.id}
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  defaultValue={
+                    priceEdit
+                      ? (data.price_list_items.find(
+                          (i) =>
+                            i.price_list_id === priceEdit.id &&
+                            i.product_id === p.id,
+                        )?.rate_paise ?? "") === ""
+                        ? ""
+                        : data.price_list_items.find(
+                            (i) =>
+                              i.price_list_id === priceEdit.id &&
+                              i.product_id === p.id,
+                          )!.rate_paise / 100
+                      : ""
+                  }
+                />
               </Field>
             ))}
             <ErrorMessage error={m.error} />

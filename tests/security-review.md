@@ -47,3 +47,15 @@ Resolution is pending unless a later entry states otherwise. Findings were sent 
 The coordinator reported 17 local automated tests and four sample browser tests passing. Inspected tests cover local RLS/role checks, pricing, stock/payment invariants, partial shipments, return cap, embedded backup/reload, route accessibility and a sample A4 PDF. They do not prove real email delivery, cloud roles/token revocation, two independent database sessions, multi-page invoice fidelity, provider ownership or off-site recovery.
 
 Verdict: source-level protections exist, but fix the operational findings and complete the cloud/business gates before calling this a production-ready order system.
+
+## Integration verification update — 25 October 2026
+
+The earlier findings above preserve the independent review history. The integration release corrected findings 1–8: credit/refund visibility, invoice-only snapshot rendering, stable dispatch/return/stock request IDs, remaining-quantity/history UI, reload-before-duplicate navigation, guarded dirty navigation, supply-state GST derivation and bounded monetary values. Tests now cover 20 embedded PostgreSQL scenarios plus 8 contrast checks. Seven browser tests pass, including cancelled dirty navigation and Google provider/PKCE handling. Live disposable-account checks additionally verified email login, durable draft/reload, server prices, retailer isolation, suspension with an existing token and sign-out.
+
+The additional UI gaps were addressed with audited transport updates, staff internal notes, existing price-list editing, explicit idempotent exchange links, general staff wholesale display, customer-filtered movement reports and saved-draft retry handling. Cash refund recording remains open; returns create visible account credit, not a money transfer.
+
+Finding 9 has revised logical backup/restore scripts preserving ACLs and custom auth triggers, with an isolated Supabase target and reconciliation checks. A real company-controlled off-site restore is still pending, so recovery acceptance remains open. Two-session cloud contention, actual email/reset delivery, original/multi-page invoice review and company ownership handover also remain pending.
+
+The final Supabase security advisor query reports 15 authenticated SECURITY DEFINER RPC warnings and no other security lint. These functions deliberately expose guarded business transactions while direct table writes are denied; fixed search paths and active-role checks are required controls, not a reason to ignore future new warnings. [Advisor explanation and remediation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
+
+Google credentials were deferred by the user. A visible button and mocked authorization redirect test do not demonstrate real Google authentication. Follow `docs/AUTH.md` before marking that provider accepted.

@@ -172,6 +172,7 @@ export default function App() {
   const can = (roles: string[]) =>
     !roles.length || roles.includes(current.profile?.role || "");
   async function signOut() {
+    if (!allowNavigation()) return;
     if (sample) {
       setSample(false);
       navigate("dashboard");
@@ -240,7 +241,14 @@ export default function App() {
     <AppContext.Provider
       value={{ data: current, sample, reload, notify: setToast, navigate, can }}
     >
-      <a className="skip-link" href="#main-content">
+      <a
+        className="skip-link"
+        href="#main-content"
+        onClick={(e) => {
+          e.preventDefault();
+          document.getElementById("main-content")?.focus();
+        }}
+      >
         Skip to content
       </a>
       <div
@@ -386,7 +394,7 @@ export default function App() {
               </button>
             </div>
           )}
-          <main id="main-content" className="page-content">
+          <main id="main-content" className="page-content" tabIndex={-1}>
             <ErrorMessage error={error} />
             {!allowed ? (
               <Empty title="This section isn’t in your role">

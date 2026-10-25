@@ -124,3 +124,79 @@ for (const colorScheme of ["light", "dark"] as const)
       fullPage: true,
     });
   });
+
+test("unsaved matrix navigation can be cancelled without losing quantities", async ({
+  page,
+}) => {
+  await sample(page);
+  await page.getByRole("button", { name: "Create order", exact: true }).click();
+  await page.getByRole("button", { name: "Add product", exact: true }).click();
+  await page.locator(".product-picker button").first().click();
+  const quantity = page.getByRole("spinbutton", {
+    name: "Everyday Comfort, Rose, size 30 quantity",
+    exact: true,
+  });
+  await quantity.fill("7");
+  page.once("dialog", (d) => d.dismiss());
+  await page.locator('nav a[href="#catalogue"]').click();
+  await expect(quantity).toHaveValue("7");
+  await expect(page).toHaveURL(/#orders\/new$/);
+  page.once("dialog", (d) => d.accept());
+  await page.locator('nav a[href="#catalogue"]').click();
+  await expect(
+    page.getByRole("heading", { name: "The collection", exact: true }),
+  ).toBeVisible();
+});
+
+test("Google sign-in is visible and a disabled provider gives a recoverable error", async ({
+  page,
+}) => {
+  await page.route("**/auth/v1/settings", (route) =>
+    route.fulfill({ json: { external: { google: false } } }),
+  );
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Continue with Google", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText(
+    "Google sign-in is awaiting provider setup",
+  );
+  await expect(
+    page.getByRole("button", { name: "Sign in", exact: true }),
+  ).toBeEnabled();
+  await page
+    .getByRole("button", { name: "Apply for partner access", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", { name: "Continue with Google", exact: true }),
+  ).toBeVisible();
+});
+test("Google sign-in starts a PKCE flow at Supabase with the approved callback", async ({
+  page,
+}) => {
+  await page.route("**/auth/v1/settings", (route) =>
+    route.fulfill({ json: { external: { google: true } } }),
+  );
+  let requested = "";
+  await page.route("**/auth/v1/authorize?**", (route) => {
+    requested = route.request().url();
+    return route.fulfill({
+      contentType: "text/html",
+      body: "<h1>Isolated OAuth redirect test</h1>",
+    });
+  });
+  await page.goto("/");
+  const origin = new URL(page.url()).origin;
+  await page
+    .getByRole("button", { name: "Continue with Google", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Isolated OAuth redirect test" }),
+  ).toBeVisible();
+  const query = new URL(requested).searchParams;
+  expect(query.get("provider")).toBe("google");
+  expect(query.get("redirect_to")).toBe(origin + "/");
+  expect(query.get("code_challenge_method")).toBe("s256");
+  expect(query.get("code_challenge")).toBeTruthy();
+  expect(query.get("prompt")).toBe("select_account");
+});

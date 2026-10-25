@@ -121,4 +121,26 @@ test('public product photography is readable but only active administrators can 
  await as('owner');await db.query('delete from storage.objects where id=$1',[photo]);
 });
 
+test('transport updates preserve prices and require authorised fulfilment access',async()=>{
+ const before=(await db.query('select total_paise from public.orders where id=$1',[order])).rows[0].total_paise;
+ await rpc('update_dispatch_details',[order,{transporter:'Test transport',lr_number:'QA-LR',dispatch_details:'Shipment reference'}]);
+ const updated=(await db.query('select transporter,lr_number,total_paise from public.orders where id=$1',[order])).rows[0];assert.equal(updated.lr_number,'QA-LR');assert.equal(updated.total_paise,before);
+ await assert.rejects(rpc('update_dispatch_details',[order,{lr_date:'2000-01-01'}]),/LR date/);
+ await as('retailer');await assert.rejects(rpc('update_dispatch_details',[order,{}]),/permission/);
+});
+test('exchanges create one linked replacement draft from a recorded return',async()=>{
+ const ret=(await db.query('select id from public.returns where order_id=$1 order by id limit 1',[order])).rows[0].id;
+ const replacement=await rpc('create_exchange_order',[ret]);assert.equal(await rpc('create_exchange_order',[ret]),replacement);
+ const o=(await db.query('select * from public.orders where id=$1',[replacement])).rows[0];assert.equal(o.status,'draft');assert.equal(o.exchange_return_id,ret);assert.equal(o.customer_id,customer);
+ assert.equal((await db.query('select quantity from public.order_lines where order_id=$1',[replacement])).rows[0].quantity,1);
+ await as('retailer');await assert.rejects(rpc('create_exchange_order',[ret]),/permission/);
+});
+test('matrix positions and server text limits survive save and reject oversized forms',async()=>{
+ const second=await rpc('save_product',[{sku:'POSITION',name:'Position fixture',mrp_paise:100,retail_paise:100,wholesale_paise:100,variants:[{colour:'Blue',size:'30',stock:2}]}]);
+ const o=await rpc('save_order',[{...payload(),lines:[{product_id:second,colour:'Blue',quantities:{30:1}},{product_id:product,colour:'Rose',quantities:{30:1}}]}]);
+ const positions=(await db.query('select product_id,position from public.order_lines where order_id=$1 order by position',[o])).rows;assert.deepEqual(positions.map(x=>x.product_id),[second,product]);
+ await assert.rejects(rpc('save_order',[{...payload(),notes:'x'.repeat(140000)}]),/data limit/);
+ await assert.rejects(rpc('save_customer',[{name:'Bounds',billing_address:'x'.repeat(2001)}]),/customer_text_bounds/);
+});
+
 test('database backup reload preserves orders, payments and stock',async()=>{await db.exec('reset role');const before=await db.query('select count(*)::int n from public.orders');const backup=await db.dumpDataDir();const restored=new PGlite({loadDataDir:backup});assert.deepEqual((await restored.query('select count(*)::int n from public.orders')).rows,before.rows);assert.equal((await restored.query('select count(*)::int n from public.payments')).rows[0].n,1);assert.equal((await restored.query("select stock from public.variants where size='30'")).rows[0].stock,10);await restored.close();await db.close();});
