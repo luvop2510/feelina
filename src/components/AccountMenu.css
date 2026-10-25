@@ -1,0 +1,35 @@
+.sidebar-bottom {
+  position: relative;
+}
+.account-panel {
+  display: grid;
+  gap: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+  font-size: 13px;
+}
+.account-panel > span {
+  color: var(--muted);
+}
+.account-role {
+  text-transform: capitalize;
+}
+.account-panel .button {
+  margin-top: 6px;
+  min-height: 44px;
+}
+.account-retry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 20px;
+}
+.profile-button > span:nth-child(2) {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

@@ -1,18 +1,12 @@
 import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
-async function sample(page: any) {
-  await page.goto("/");
-  await page.getByRole("button", { name: "Explore sample workspace" }).click();
-  await expect(
-    page.getByRole("heading", { name: "A little clarity for your day." }),
-  ).toBeVisible();
-}
-test("desktop sample routes, search, matrix entry and print are usable without writes", async ({
+import { openAuthenticatedWorkspace } from "./fixtures/authenticated";
+test("desktop authenticated routes, search, matrix entry and print are usable without writes", async ({
   page,
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await sample(page);
+  await openAuthenticatedWorkspace(page);
   for (const route of [
     "catalogue",
     "customers",
@@ -55,7 +49,7 @@ test("desktop sample routes, search, matrix entry and print are usable without w
   await expect(page.locator(".grand-total")).toContainText("1,425");
   await expect(
     page.getByRole("button", { name: "Save draft", exact: true }),
-  ).toBeDisabled();
+  ).toBeEnabled();
   expect(errors).toEqual([]);
   await page.screenshot({
     path: "test-results/order-matrix.png",
@@ -66,7 +60,7 @@ test("375px mobile navigation and matrix contain horizontal scrolling", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 375, height: 812 });
-  await sample(page);
+  await openAuthenticatedWorkspace(page);
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -96,7 +90,7 @@ test("375px mobile navigation and matrix contain horizontal scrolling", async ({
 for (const colorScheme of ["light", "dark"] as const)
   test(`accessibility in ${colorScheme} appearance`, async ({ page }) => {
     await page.emulateMedia({ colorScheme, reducedMotion: "reduce" });
-    await sample(page);
+    await openAuthenticatedWorkspace(page);
     for (const route of [
       "dashboard",
       "orders",
@@ -128,7 +122,7 @@ for (const colorScheme of ["light", "dark"] as const)
 test("unsaved matrix navigation can be cancelled without losing quantities", async ({
   page,
 }) => {
-  await sample(page);
+  await openAuthenticatedWorkspace(page);
   await page.getByRole("button", { name: "Create order", exact: true }).click();
   await page.getByRole("button", { name: "Add product", exact: true }).click();
   await page.locator(".product-picker button").first().click();
@@ -144,7 +138,7 @@ test("unsaved matrix navigation can be cancelled without losing quantities", asy
   page.once("dialog", (d) => d.accept());
   await page.locator('nav a[href="#catalogue"]').click();
   await expect(
-    page.getByRole("heading", { name: "The collection", exact: true }),
+    page.getByRole("heading", { name: "Catalogue", exact: true }),
   ).toBeVisible();
 });
 

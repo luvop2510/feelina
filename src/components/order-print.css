@@ -1,0 +1,268 @@
+/* Shared screen/PDF document geometry. Print overrides are scoped to the order
+   document so report and receipt printing keep their own layouts. */
+.order-document .document-header {
+  align-items: flex-start;
+  padding-bottom: 20px;
+}
+.order-document .document-meta {
+  gap: 0;
+  padding: 0;
+  margin: 20px 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.order-document .document-meta > div {
+  min-width: 0;
+  padding: 16px;
+  overflow-wrap: anywhere;
+}
+.order-document .document-meta > div + div {
+  border-left: 1px solid var(--border);
+}
+.order-document .document-meta p {
+  margin: 6px 0 0;
+  line-height: 1.6;
+}
+.order-document .document-meta > div > strong {
+  display: block;
+  margin-top: 6px;
+}
+.order-document .print-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.order-document .print-matrix th,
+.order-document .print-matrix td {
+  padding: 12px 8px;
+  border: 1px solid var(--border);
+  vertical-align: middle;
+  line-height: 1.45;
+}
+.order-document .print-matrix th {
+  font-weight: 600;
+}
+.order-document .print-matrix small {
+  display: block;
+  margin-top: 4px;
+}
+.order-document .print-matrix td:nth-child(3),
+.order-document .print-matrix td:nth-child(13),
+.order-document .print-matrix td:nth-child(14),
+.order-document .print-matrix tfoot td:last-child {
+  text-align: right;
+}
+.order-document .document-totals {
+  gap: 24px;
+  align-items: start;
+}
+.order-document .document-summary {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-collapse: collapse;
+  font-size: 12px;
+  table-layout: fixed;
+}
+.order-document .document-summary th,
+.order-document .document-summary td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border);
+  line-height: 1.4;
+  vertical-align: top;
+}
+.order-document .document-summary th {
+  width: 52%;
+  text-align: left;
+  font-weight: 400;
+  background: transparent;
+}
+.order-document .document-summary td {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.order-document .document-summary .grand-total {
+  font-size: 14px !important;
+  background: var(--canvas);
+}
+.order-document .document-summary .grand-total th,
+.order-document .document-summary .grand-total td {
+  font-weight: 700;
+}
+.order-document .document-signature {
+  margin-top: 24px;
+  padding-top: 32px;
+  align-items: end;
+}
+@media screen and (max-width: 600px) {
+  .order-document.panel {
+    padding: 16px;
+  }
+  .order-document .document-meta {
+    grid-template-columns: 1fr;
+    margin: 16px 0;
+  }
+  .order-document .document-meta > div + div {
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+  .order-document .document-totals {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+  .order-document .document-summary th,
+  .order-document .document-summary td {
+    padding: 12px;
+  }
+  .order-document .document-signature {
+    align-items: start;
+    gap: 40px;
+  }
+}
+@media print {
+  .order-document {
+    --border: #b8bec4;
+    --canvas: #f2f4f5;
+    --muted: #333;
+    --ink: #111;
+    line-height: 1.4;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .order-document .document-header {
+    gap: 8mm;
+    padding-bottom: 5mm;
+  }
+  .order-document .document-header h2 {
+    margin: 3mm 0 2mm;
+    font-size: 10pt;
+  }
+  .order-document .document-header p {
+    font-size: 8.5pt;
+    line-height: 1.5;
+  }
+  .order-document .document-title {
+    flex: 0 0 55mm;
+  }
+  .order-document .document-title > strong {
+    font-size: 14pt;
+  }
+  .order-document .document-title > span {
+    margin-bottom: 2mm;
+    font-size: 9pt;
+    letter-spacing: 0.6pt;
+  }
+  .order-document .document-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    margin: 5mm 0;
+    border-radius: 0;
+    font-size: 8pt;
+  }
+  .order-document .document-meta > div {
+    padding: 3mm;
+  }
+  .order-document .document-meta p {
+    line-height: 1.5;
+    margin-top: 1.5mm;
+  }
+  .order-document .print-matrix {
+    min-width: 0;
+    width: 100%;
+    table-layout: fixed;
+    font-size: 7pt;
+  }
+  /* 4 + 23 + 8 + (8 × 4.75) + 5 + 10 + 12 = 100% of A4 content width. */
+  .order-document .document-col-number {
+    width: 4%;
+  }
+  .order-document .document-col-product {
+    width: 23%;
+  }
+  .order-document .document-col-mrp {
+    width: 8%;
+  }
+  .order-document .document-col-size {
+    width: 4.75%;
+  }
+  .order-document .document-col-quantity {
+    width: 5%;
+  }
+  .order-document .document-col-rate {
+    width: 10%;
+  }
+  .order-document .document-col-amount {
+    width: 12%;
+  }
+  .order-document .print-matrix th,
+  .order-document .print-matrix td {
+    min-width: 0;
+    width: auto;
+    padding: 2.4mm 1mm;
+    font-size: 7pt;
+    line-height: 1.4;
+    color: #111;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  .order-document .print-matrix small {
+    font-size: 6.5pt;
+    line-height: 1.35;
+    margin-top: 1mm;
+  }
+  .order-document .print-matrix th,
+  .order-document .print-matrix tfoot td {
+    background: #f2f4f5;
+  }
+  .order-document .print-matrix td:nth-child(3),
+  .order-document .print-matrix td:nth-child(13),
+  .order-document .print-matrix td:nth-child(14),
+  .order-document .print-matrix tfoot td:last-child {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
+  .order-document .print-matrix thead {
+    display: table-header-group;
+  }
+  .order-document .print-matrix tfoot {
+    display: table-row-group;
+  }
+  .order-document .print-matrix tr {
+    break-inside: avoid;
+  }
+  .order-document .document-closing {
+    break-inside: auto;
+  }
+  .order-document .document-totals {
+    grid-template-columns: minmax(0, 1fr) 68mm;
+    gap: 8mm;
+    padding-top: 5mm;
+    font-size: 8pt;
+    break-inside: avoid;
+  }
+  .order-document .document-totals p {
+    margin-top: 1.5mm;
+    margin-bottom: 3mm;
+    line-height: 1.5;
+  }
+  .order-document .document-summary {
+    font-size: 8pt;
+    break-inside: avoid;
+  }
+  .order-document .document-summary th,
+  .order-document .document-summary td {
+    padding: 2mm 2.5mm;
+    color: #111;
+  }
+  .order-document .document-summary .grand-total {
+    font-size: 10pt !important;
+  }
+  .order-document .document-signature {
+    margin-top: 6mm;
+    padding-top: 10mm;
+    font-size: 8pt;
+    break-inside: avoid;
+  }
+}

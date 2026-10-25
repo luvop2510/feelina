@@ -12,6 +12,9 @@ import {
   PackageCheck,
 } from "lucide-react";
 import { useApp } from "../lib/context";
+import { getSizeLabel } from "../lib/sizes";
+import { Brand } from "./Brand";
+import "./order-print.css";
 import { saveOrder, transitionOrder, issueInvoice, rpc } from "../lib/api";
 import {
   money,
@@ -58,7 +61,6 @@ export function Orders() {
     <>
       <div className="page-heading">
         <div>
-          <div className="eyebrow">FROM FIRST QUANTITY TO FINAL DELIVERY</div>
           <h1 tabIndex={-1}>Orders</h1>
           <p>Every retailer’s order, with the details in the right place.</p>
         </div>
@@ -439,7 +441,6 @@ export function OrderEditor({ orderId }: { orderId?: string }) {
       </button>
       <div className="page-heading">
         <div>
-          <div className="eyebrow">A PLACE FOR EVERY SIZE</div>
           <h1 tabIndex={-1}>{original ? "Edit draft" : "Create an order"}</h1>
           <p>
             Select your retailer, choose products, and enter quantities by size.
@@ -590,13 +591,13 @@ export function OrderEditor({ orderId }: { orderId?: string }) {
               <table className="matrix">
                 <thead>
                   <tr>
-                    <th>No.</th>
-                    <th>Particulars</th>
+                    <th scope="col">No.</th>
+                    <th scope="col">Product / colour</th>
                     <th>MRP</th>
                     {SIZES.map((s) => (
                       <th key={s}>
                         {s}
-                        <small>{data.settings?.size_labels?.[s] || "—"}</small>
+                        <small>{getSizeLabel(s)}</small>
                       </th>
                     ))}
                     <th>Qty</th>
@@ -951,7 +952,6 @@ export function OrderDetail({ id }: { id: string }) {
         </button>
         <div className="page-heading">
           <div>
-            <div className="eyebrow">ORDER DETAILS</div>
             <h1 tabIndex={-1}>
               {order.number} <Badge status={order.status} />
             </h1>
@@ -1012,7 +1012,7 @@ export function OrderDetail({ id }: { id: string }) {
       <article className="panel order-document">
         <div className="document-header">
           <div>
-            <div className="wordmark">feelina</div>
+            <Brand className="document-brand" />
             <h2>
               {settings.company_verified ? settings.company_name : "Feelina"}
             </h2>
@@ -1084,14 +1084,7 @@ export function OrderDetail({ id }: { id: string }) {
           </div>
         </div>
         <div className="table-wrap" tabIndex={0} aria-label="Order size matrix">
-          <DocumentMatrix
-            lines={lines}
-            labels={
-              documentOrder.settings_snapshot?.size_labels ||
-              settings.size_labels ||
-              {}
-            }
-          />
+          <DocumentMatrix lines={lines} />
         </div>
         <div className="document-closing">
           <div className="document-totals">
@@ -1110,77 +1103,84 @@ export function OrderDetail({ id }: { id: string }) {
                 <p>Dispatch: {documentOrder.dispatch_details}</p>
               )}
             </div>
-            <dl>
-              {Number(documentOrder.paid_paise) +
-                Number(documentOrder.credit_paise || 0) >
-                Number(documentOrder.total_paise) && (
-                <div>
-                  <dt>Credit / refund owed</dt>
-                  <dd>
-                    {money(
-                      Number(documentOrder.paid_paise) +
-                        Number(documentOrder.credit_paise || 0) -
-                        Number(documentOrder.total_paise),
-                    )}
-                  </dd>
-                </div>
-              )}
-              <div>
-                <dt>Subtotal</dt>
-                <dd>{money(documentOrder.subtotal_paise)}</dd>
-              </div>
-              <div>
-                <dt>Discount</dt>
-                <dd>− {money(documentOrder.discount_paise)}</dd>
-              </div>
-              {settings.tax_mode === "cgst_sgst" ? (
-                <>
-                  <div>
-                    <dt>CGST</dt>
-                    <dd>{money(Math.floor(documentOrder.tax_paise / 2))}</dd>
-                  </div>
-                  <div>
-                    <dt>SGST</dt>
-                    <dd>
+            <table
+              className="document-summary"
+              aria-label="Order amount summary"
+            >
+              <tbody>
+                {Number(documentOrder.paid_paise) +
+                  Number(documentOrder.credit_paise || 0) >
+                  Number(documentOrder.total_paise) && (
+                  <tr>
+                    <th scope="row">Credit / refund owed</th>
+                    <td>
                       {money(
-                        documentOrder.tax_paise -
-                          Math.floor(documentOrder.tax_paise / 2),
+                        Number(documentOrder.paid_paise) +
+                          Number(documentOrder.credit_paise || 0) -
+                          Number(documentOrder.total_paise),
                       )}
-                    </dd>
-                  </div>
-                </>
-              ) : (
-                <div>
-                  <dt>{settings.tax_mode === "igst" ? "IGST" : "Tax"}</dt>
-                  <dd>{money(documentOrder.tax_paise)}</dd>
-                </div>
-              )}
-              <div className="grand-total">
-                <dt>Total</dt>
-                <dd>{money(documentOrder.total_paise)}</dd>
-              </div>
-              <div>
-                <dt>Paid</dt>
-                <dd>{money(documentOrder.paid_paise)}</dd>
-              </div>
-              <div>
-                <dt>Return credits</dt>
-                <dd>{money(documentOrder.credit_paise || 0)}</dd>
-              </div>
-              <div>
-                <dt>Outstanding</dt>
-                <dd>
-                  {money(
-                    Math.max(
-                      0,
-                      documentOrder.total_paise -
-                        documentOrder.paid_paise -
-                        Number(documentOrder.credit_paise || 0),
-                    ),
-                  )}
-                </dd>
-              </div>
-            </dl>
+                    </td>
+                  </tr>
+                )}
+                <tr>
+                  <th scope="row">Subtotal</th>
+                  <td>{money(documentOrder.subtotal_paise)}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Discount</th>
+                  <td>− {money(documentOrder.discount_paise)}</td>
+                </tr>
+                {settings.tax_mode === "cgst_sgst" ? (
+                  <>
+                    <tr>
+                      <th scope="row">CGST</th>
+                      <td>{money(Math.floor(documentOrder.tax_paise / 2))}</td>
+                    </tr>
+                    <tr>
+                      <th scope="row">SGST</th>
+                      <td>
+                        {money(
+                          documentOrder.tax_paise -
+                            Math.floor(documentOrder.tax_paise / 2),
+                        )}
+                      </td>
+                    </tr>
+                  </>
+                ) : (
+                  <tr>
+                    <th scope="row">
+                      {settings.tax_mode === "igst" ? "IGST" : "Tax"}
+                    </th>
+                    <td>{money(documentOrder.tax_paise)}</td>
+                  </tr>
+                )}
+                <tr className="grand-total">
+                  <th scope="row">Total</th>
+                  <td>{money(documentOrder.total_paise)}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Paid</th>
+                  <td>{money(documentOrder.paid_paise)}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Return credits</th>
+                  <td>{money(documentOrder.credit_paise || 0)}</td>
+                </tr>
+                <tr>
+                  <th scope="row">Outstanding</th>
+                  <td>
+                    {money(
+                      Math.max(
+                        0,
+                        documentOrder.total_paise -
+                          documentOrder.paid_paise -
+                          Number(documentOrder.credit_paise || 0),
+                      ),
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
           <div className="document-signature">
             <span>Thank you for choosing Feelina.</span>
@@ -1433,24 +1433,32 @@ export function OrderDetail({ id }: { id: string }) {
     </>
   );
 }
-function DocumentMatrix({
-  lines,
-  labels,
-}: {
-  lines: OrderLine[];
-  labels: Record<string, string>;
-}) {
+function DocumentMatrix({ lines }: { lines: OrderLine[] }) {
   return (
     <table className="matrix print-matrix">
+      <caption className="sr-only">
+        Products, quantities by size, rates and amounts in Indian rupees
+      </caption>
+      <colgroup>
+        <col className="document-col-number" />
+        <col className="document-col-product" />
+        <col className="document-col-mrp" />
+        {SIZES.map((size) => (
+          <col className="document-col-size" key={size} />
+        ))}
+        <col className="document-col-quantity" />
+        <col className="document-col-rate" />
+        <col className="document-col-amount" />
+      </colgroup>
       <thead>
         <tr>
-          <th>No.</th>
-          <th>Particulars</th>
+          <th scope="col">No.</th>
+          <th scope="col">Product / colour</th>
           <th>MRP</th>
           {SIZES.map((s) => (
             <th key={s}>
               {s}
-              <small>{labels[s] || ""}</small>
+              <small>{getSizeLabel(s)}</small>
             </th>
           ))}
           <th>Qty</th>

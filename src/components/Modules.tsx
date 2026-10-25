@@ -39,6 +39,8 @@ import {
   Badge,
 } from "./ui";
 import { CustomerForm } from "./CustomerForm";
+import { getSizeLabel } from "../lib/sizes";
+import { Brand } from "./Brand";
 const formValues = (e: FormEvent<HTMLFormElement>) =>
   Object.fromEntries(new FormData(e.currentTarget));
 const creditOwed = (o: Row) =>
@@ -63,7 +65,6 @@ function Heading({
   return (
     <div className="page-heading">
       <div>
-        <div className="eyebrow">FEELINA WORKSPACE</div>
         <h1 tabIndex={-1}>{heading}</h1>
         <p>{children}</p>
       </div>
@@ -114,7 +115,7 @@ export function Catalogue() {
   return (
     <>
       <Heading
-        title="The collection"
+        title="Catalogue"
         action={
           can(["owner", "admin"]) && (
             <button className="button primary" onClick={() => setEdit(null)}>
@@ -124,7 +125,7 @@ export function Catalogue() {
           )
         }
       >
-        Every product, colour and size, in one place.
+        Browse products, colours, sizes and agreed prices.
       </Heading>
       <div className="toolbar">
         <SearchBox
@@ -132,20 +133,25 @@ export function Catalogue() {
           onChange={setQuery}
           placeholder="Search by product, SKU or category"
         />
-        <span className="muted">{rows.length} products</span>
+        <span className="muted" role="status">
+          {rows.length} products
+        </span>
       </div>
       <div className="catalogue-grid">
-        {rows.map((p, i) => (
+        {rows.map((p) => (
           <article className="panel product-card" key={p.id}>
-            <div className={"product-art tone-" + (i % 3)}>
+            <div className="product-art">
               {p.image_url ? (
                 <img src={p.image_url} alt={p.name} loading="lazy" />
               ) : (
-                <Package size={48} strokeWidth={1} />
+                <div className="product-image-empty">
+                  <Package size={32} strokeWidth={1.5} aria-hidden="true" />
+                  <span>No product image</span>
+                </div>
               )}
-              <span>{p.category || "Essentials"}</span>
             </div>
             <div className="product-info">
+              <p className="product-category">{p.category || "Essentials"}</p>
               <small>
                 {p.sku} · {p.active ? "Active" : "Inactive"}
               </small>
@@ -190,8 +196,10 @@ export function Catalogue() {
         ))}
       </div>
       {!rows.length && (
-        <Empty title="Build your collection">
-          Add the first product with its colours, sizes and opening stock.
+        <Empty title={query ? "No matching products" : "No products yet"}>
+          {query
+            ? "Try a different product name, SKU or category."
+            : "Add the first product with its colours, sizes and opening stock."}
         </Empty>
       )}
       {edit !== undefined && (
@@ -353,7 +361,7 @@ function ProductForm({
           <div className="variant-grid">
             {variants.map((v, i) => (
               <div key={i}>
-                <Field label={`Colour · size ${v.size}`}>
+                <Field label={`Colour · ${v.size} (${getSizeLabel(v.size)})`}>
                   <input
                     required
                     value={v.colour}
@@ -422,7 +430,7 @@ export function Customers() {
   return (
     <>
       <Heading
-        title="Your retail partners"
+        title="Customers"
         action={
           can(["owner", "admin", "sales"]) && (
             <button className="button primary" onClick={() => setEdit(null)}>
@@ -432,19 +440,26 @@ export function Customers() {
           )
         }
       >
-        Contact details, agreed terms and a clear account history.
+        Manage contact details, credit terms and account history.
       </Heading>
       <div className="toolbar">
         <SearchBox value={q} onChange={setQ} placeholder="Search customers" />
+        <span className="muted" role="status">
+          {rows.length} customers
+        </span>
       </div>
-      <section className="panel table-wrap">
+      <section
+        className="panel table-wrap"
+        tabIndex={0}
+        aria-label="Customer accounts"
+      >
         <table>
           <thead>
             <tr>
               <th>Business / contact</th>
               <th>Phone / email</th>
               <th>Credit terms</th>
-              <th>Outstanding</th>
+              <th className="numeric">Outstanding</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -466,7 +481,7 @@ export function Customers() {
                       ?.name || "Standard rates"}
                   </small>
                 </td>
-                <td>
+                <td className="numeric">
                   {money(
                     data.orders
                       .filter(
@@ -478,26 +493,33 @@ export function Customers() {
                   )}
                 </td>
                 <td>
-                  <button className="text-button" onClick={() => setLedger(c)}>
-                    Ledger
-                  </button>
-                  {can(["owner", "admin", "sales"]) && (
+                  <div className="row-actions">
                     <button
-                      className="icon-button"
-                      aria-label={"Edit " + c.shop_name}
-                      onClick={() => setEdit(c)}
+                      className="text-button"
+                      onClick={() => setLedger(c)}
                     >
-                      <Pencil size={16} />
+                      Ledger
                     </button>
-                  )}
+                    {can(["owner", "admin", "sales"]) && (
+                      <button
+                        className="icon-button"
+                        aria-label={"Edit " + c.shop_name}
+                        onClick={() => setEdit(c)}
+                      >
+                        <Pencil size={16} />
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
         {!rows.length && (
-          <Empty title="No customers yet">
-            Add a retailer to start their first order.
+          <Empty title={q ? "No matching customers" : "No customers yet"}>
+            {q
+              ? "Try another name, shop or phone number."
+              : "Add a retailer to start their first order."}
           </Empty>
         )}
       </section>
@@ -514,7 +536,12 @@ export function Customers() {
           onClose={() => setLedger(null)}
         >
           <p>{ledger.billing_address}</p>
-          <div className="table-wrap">
+          <div
+            className="table-wrap"
+            tabIndex={0}
+            role="region"
+            aria-label={ledger.shop_name + " account ledger"}
+          >
             <table>
               <thead>
                 <tr>
@@ -589,7 +616,7 @@ export function Inventory() {
   return (
     <>
       <Heading
-        title="Inventory, size by size"
+        title="Inventory"
         action={
           <button
             className="button secondary"
@@ -613,7 +640,7 @@ export function Inventory() {
           </button>
         }
       >
-        See what is available, reserved and ready to move.
+        Track available and reserved stock by product, colour and size.
       </Heading>
       <div className="toolbar">
         <SearchBox
@@ -630,16 +657,20 @@ export function Inventory() {
           Low stock only
         </label>
       </div>
-      <section className="panel table-wrap">
+      <section
+        className="panel table-wrap"
+        tabIndex={0}
+        aria-label="Stock by product and size"
+      >
         <table>
           <thead>
             <tr>
               <th>Product</th>
               <th>Colour</th>
               <th>Size</th>
-              <th>On hand</th>
-              <th>Reserved</th>
-              <th>Available</th>
+              <th className="numeric">On hand</th>
+              <th className="numeric">Reserved</th>
+              <th className="numeric">Available</th>
               <th>Action</th>
             </tr>
           </thead>
@@ -651,10 +682,12 @@ export function Inventory() {
                   <small>{v.product?.sku}</small>
                 </td>
                 <td>{v.colour}</td>
-                <td>{v.size}</td>
-                <td>{v.stock}</td>
-                <td>{v.reserved}</td>
                 <td>
+                  {v.size} <small>{getSizeLabel(v.size)}</small>
+                </td>
+                <td className="numeric">{v.stock}</td>
+                <td className="numeric">{v.reserved}</td>
+                <td className="numeric">
                   {v.stock - v.reserved}
                   {v.stock - v.reserved < 10 && (
                     <small className="warning-text">Low stock</small>
@@ -689,7 +722,7 @@ export function Inventory() {
         className="panel table-wrap"
         tabIndex={0}
         role="region"
-        aria-label="Report records"
+        aria-label="Stock movement history"
       >
         <table>
           <thead>
@@ -709,7 +742,7 @@ export function Inventory() {
                   <td>{date(x.created_at)}</td>
                   <td>
                     {data.products.find((p) => p.id === v?.product_id)?.sku} ·{" "}
-                    {v?.colour} · {v?.size}
+                    {v?.colour} · {v?.size} ({getSizeLabel(v?.size || "")})
                   </td>
                   <td>{title(x.kind)}</td>
                   <td>{x.quantity}</td>
@@ -799,7 +832,7 @@ export function Payments() {
     <>
       <div className="no-print">
         <Heading
-          title="Payments & receivables"
+          title="Payments"
           action={
             can(["owner", "admin", "accounts"]) && (
               <button
@@ -815,7 +848,7 @@ export function Payments() {
             )
           }
         >
-          Orders first. Payments recorded when money is received.
+          Track received payments, outstanding balances and credits.
         </Heading>
         <div className="stats-grid">
           <div className="stat-card">
@@ -850,13 +883,17 @@ export function Payments() {
             <small>Review returns with accounts before refunding.</small>
           </div>
         </div>
-        <section className="panel table-wrap">
+        <section
+          className="panel table-wrap"
+          tabIndex={0}
+          aria-label="Payment records"
+        >
           <table>
             <thead>
               <tr>
                 <th>Date</th>
                 <th>Order</th>
-                <th>Amount</th>
+                <th className="numeric">Amount</th>
                 <th>Method</th>
                 <th>Reference</th>
                 <th>Receipt</th>
@@ -869,7 +906,7 @@ export function Payments() {
                   <td>
                     {data.orders.find((o) => o.id === p.order_id)?.number}
                   </td>
-                  <td>{money(p.amount_paise)}</td>
+                  <td className="numeric">{money(p.amount_paise)}</td>
                   <td>{title(p.method)}</td>
                   <td>{p.reference || "—"}</td>
                   <td>
@@ -910,7 +947,9 @@ export function Payments() {
       </div>
       {receipt && (
         <section className="panel receipt-document">
-          <div className="wordmark">feelina</div>
+          <div className="wordmark">
+            <Brand />
+          </div>
           <h2>Payment receipt</h2>
           <p>Receipt reference: {receipt.id}</p>
           <p>
@@ -1072,7 +1111,7 @@ export function Reports() {
   return (
     <>
       <Heading
-        title="Business reports"
+        title="Reports"
         action={
           <div className="heading-actions no-print">
             <button
@@ -1089,7 +1128,7 @@ export function Reports() {
           </div>
         }
       >
-        Filter the records behind your order, size and inventory summaries.
+        Filter and export order, size and stock movement records.
       </Heading>
       <div className="toolbar no-print">
         <Field label="Report">
@@ -1139,7 +1178,7 @@ export function Reports() {
         aria-label="Report records"
       >
         {rows.length ? (
-          <table>
+          <table className="report-table">
             <thead>
               <tr>
                 {Object.keys(rows[0]).map((k) => (
@@ -1151,7 +1190,16 @@ export function Reports() {
               {rows.map((r, i) => (
                 <tr key={i}>
                   {Object.values(r).map((v, j) => (
-                    <td key={j}>{String(v ?? "—")}</td>
+                    <td
+                      key={j}
+                      className={
+                        typeof v === "number" || String(v).startsWith("₹")
+                          ? "numeric"
+                          : undefined
+                      }
+                    >
+                      {String(v ?? "—")}
+                    </td>
                   ))}
                 </tr>
               ))}
@@ -1215,8 +1263,8 @@ export function SettingsPage() {
         >
           <h2>Business & tax configuration</h2>
           <p className="info-note">
-            Use verified company information only. The reference invoice and
-            size labels still need business review before launch.
+            Use verified company information only. Review business and tax
+            details before issuing invoices.
           </p>
           <div className="form-grid">
             <Field label="Registered company name">
@@ -1286,7 +1334,8 @@ export function SettingsPage() {
                   name={"size_" + s}
                   required
                   maxLength={24}
-                  defaultValue={cfg?.size_labels?.[s] || s}
+                  value={getSizeLabel(s)}
+                  readOnly
                 />
               </Field>
             ))}
@@ -1315,7 +1364,11 @@ export function SettingsPage() {
               Create user
             </button>
           </div>
-          <section className="panel table-wrap">
+          <section
+            className="panel table-wrap"
+            tabIndex={0}
+            aria-label="Team and partner accounts"
+          >
             <table>
               <thead>
                 <tr>
@@ -1416,7 +1469,11 @@ export function SettingsPage() {
         </section>
       )}
       {tab === "audit" && (
-        <section className="panel table-wrap">
+        <section
+          className="panel table-wrap"
+          tabIndex={0}
+          aria-label="Workspace audit log"
+        >
           <table>
             <thead>
               <tr>

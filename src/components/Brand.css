@@ -1,0 +1,81 @@
+.brand-logo {
+  position: relative;
+  display: inline-block;
+  width: 178px;
+  aspect-ratio: 1.8;
+  overflow: hidden;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+.brand-logo img {
+  position: absolute;
+  width: 175%;
+  max-width: none;
+  height: auto;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: multiply;
+}
+.sidebar .wordmark {
+  margin-bottom: 12px;
+}
+.workspace-emblem:has(.brand-logo) {
+  width: 56px;
+  height: 36px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.workspace-brand {
+  width: 52px;
+}
+.topbar-brand .brand-logo {
+  width: 94px;
+}
+.auth-story .brand-logo {
+  width: 210px;
+}
+@media (prefers-color-scheme: dark) {
+  .brand-logo img {
+    filter: invert(1);
+    mix-blend-mode: screen;
+  }
+}
+@media (max-width: 800px) {
+  .sidebar .brand-logo {
+    width: 132px;
+  }
+  .sidebar .workspace-brand {
+    width: 52px;
+  }
+}
+@media (max-width: 520px) {
+  .topbar {
+    gap: 8px;
+    padding-inline: 12px;
+  }
+  .topbar > div:first-child {
+    gap: 8px;
+    min-width: 0;
+  }
+  .topbar > div:first-child > strong,
+  .topbar > div:first-child > svg {
+    display: none;
+  }
+  .auth-story {
+    padding: 16px 24px;
+  }
+  .auth-story .brand-logo {
+    width: 160px;
+  }
+}
+@media print {
+  .brand-logo {
+    width: 42mm;
+  }
+  .brand-logo img {
+    filter: none;
+    mix-blend-mode: multiply;
+  }
+}

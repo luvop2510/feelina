@@ -7,18 +7,18 @@ Updated 25 October 2026. Primary site: https://feelina.vercel.app. Source: https
 | Check | Result and scope |
 |---|---|
 | Production build | `npm run build` passes TypeScript and Vite compilation. |
-| Automated business/design checks | `npm test`: 30 passing tests: 22 PostgreSQL/PGlite scenarios and 8 contrast checks. |
-| Browser checks | 11 passing Playwright tests: first-password gating, owner/distributor creation and retries, administrator restrictions, 100-row A4 pagination, desktop sample journey, 375px matrix, axe on all eight routes in light/dark, dirty navigation cancellation, Google disabled-provider recovery and PKCE redirect parameters. |
-| Cloud migrations | Five migrations applied, through `20261025103812_account_management.sql`; filenames match Supabase's migration history. |
+| Automated business/design checks | `npm test`: 35 passing tests: 22 PostgreSQL/PGlite scenarios, 12 actual CSS contrast checks and the size-chart migration check. |
+| Browser checks | 26 passing Playwright tests, including delayed-auth/profile regressions, explicit account logout, corrected one-page PDF, mobile image/action spacing, five viewport widths and: first-password gating, owner/distributor creation and retries, administrator restrictions, 100-row A4 pagination, isolated authenticated journey, 375px matrix, axe on all eight routes in light/dark, dirty navigation cancellation, Google disabled-provider recovery and PKCE redirect parameters. |
+| Cloud migrations | Six migrations applied, through `20261025130000_correct_size_chart.sql`; filenames match Supabase's migration history. |
 | Real authenticated cloud journey | Disposable owner/retailer identities: email login, catalogue selection, inline customer retaining quantities, server-priced draft, reload persistence, submission, unverified-business confirmation denied, retailer own-order access, forbidden stock mutation, suspended access denied with existing token, sign-out. `tests/cloud-live.mjs` preserves the manual test procedure; all fixture records/accounts were removed. |
 | Cloud SQL negative checks | `tests/cloud-smoke.sql` executed in a rolled-back transaction: pending signup/no escalation, retailer scope, direct-write denial and authoritative prices. |
 | Security advisor | Final query reports 16 intentionally exposed authenticated SECURITY DEFINER RPCs, each with role/status checks and fixed search paths. Auth also reports disabled leaked-password protection; see the security review. See `tests/security-review.md`. |
 | Account management | Three designated owner email logins and initial-password restrictions verified. Disposable hosted Auth/Edge/RLS checks verify password replacement, staff/distributor creation, admin escalation denial, suspended retries, customer scope and anonymous denial. |
 | Edge handler | Three isolated Deno tests pass; server SDK version and lockfile pinned. |
 | Recovery | Embedded database dump/reload retains orders, payments and stock. Supabase logical backup/restore helpers and runbook exist; a company-controlled off-site restore is still untested. |
-| Print | Sample and 100-long-row A4 PDFs generated; all rows, repeated headers and grouped final totals/signature inspected. Original invoice and multi-page business sign-off remain outstanding. |
+| Print | Corrected logo/size-chart A4 PDF fits three rows on one page; 100 long rows paginate without clipping. Cell padding, table boundaries, size headers and amounts are tested. See REBRAND-VERIFICATION.md. |
 
-PGlite uses emulated Supabase auth/storage and a single database connection. Separate hosted sessions additionally verified three rounds of stock reservation contention, competing bounded payments and duplicate payment replay (`tests/cloud-concurrency.mjs`); temporary accounts and business fixtures were removed. Browser sample tests do not prove every authenticated modal, screen-reader behavior or email delivery. The cloud journey used the prior release UI; later transport/exchange/Google changes have local automated checks and require operational acceptance with the business.
+PGlite uses emulated Supabase auth/storage and a single database connection. Separate hosted sessions additionally verified three rounds of stock reservation contention, competing bounded payments and duplicate payment replay (`tests/cloud-concurrency.mjs`); temporary accounts and business fixtures were removed. Browser tests use isolated authenticated API fixtures; they do not prove real email delivery or manual screen-reader behavior. The cloud journey used the prior release UI; later transport/exchange/Google changes have local automated checks and require operational acceptance with the business.
 
 ## Implemented behavior
 

@@ -14,7 +14,8 @@ import {
   replaceInitialPassword,
 } from "../lib/api";
 import { Field, ErrorMessage, Submit } from "./ui";
-export function Auth({ onSample }: { onSample: () => void }) {
+import { Brand } from "./Brand";
+export function Auth() {
   const [mode, setMode] = useState<"login" | "register" | "reset">("login");
   const [error, setError] = useState(() => {
     const query = new URLSearchParams(location.search);
@@ -38,7 +39,7 @@ export function Auth({ onSample }: { onSample: () => void }) {
     try {
       if (!supabase)
         throw new Error(
-          "Secure sign-in is being configured. You can explore the read-only sample workspace.",
+          "Secure sign-in is being configured. Please contact your administrator.",
         );
       const email = String(f.get("email")).trim();
       const password = String(f.get("password") || "");
@@ -80,25 +81,45 @@ export function Auth({ onSample }: { onSample: () => void }) {
     <div className="auth-page">
       <section className="auth-story">
         <a className="wordmark" href="#">
-          feelina<span>PARTNER WORKSPACE</span>
+          <Brand />
         </a>
         <div className="auth-copy">
-          <div className="eyebrow">MADE FOR YOUR EVERYDAY</div>
-          <h1>
-            Beautiful essentials.
+          <p className="auth-story-title">
+            Your trade,
             <br />
-            <em>Thoughtful business.</em>
-          </h1>
-          <p>
-            Your collection, your retailers, your next order.
-            <br />
-            One calm place to bring it all together.
+            in good order.
           </p>
-          <div className="fabric-art" aria-hidden="true">
-            <div />
-            <div />
-            <div />
-            <span>THE FEELINA WAY</span>
+          <p>
+            Bring your collection, retail partners and every size of order into
+            one connected workspace.
+          </p>
+          <div className="auth-preview panel">
+            <div className="auth-preview-header">
+              <Layers3 size={18} aria-hidden="true" />
+              <strong>Size-wise ordering</strong>
+              <span>Sample</span>
+            </div>
+            <div className="auth-preview-product">
+              <strong>Everyday Comfort</strong>
+              <span>Rose · FL-101</span>
+            </div>
+            <div
+              className="auth-size-preview"
+              aria-label="Example size quantities"
+            >
+              {["30", "32", "34", "36", "38", "40", "42", "44"].map(
+                (size, index) => (
+                  <div key={size}>
+                    <span>{size}</span>
+                    <strong>{[2, 4, 6, 6, 4, 2, 0, 0][index]}</strong>
+                  </div>
+                ),
+              )}
+            </div>
+            <div className="auth-preview-total">
+              <span>One row. Every size.</span>
+              <strong>24 units</strong>
+            </div>
           </div>
         </div>
         <div className="auth-benefits">
@@ -117,14 +138,13 @@ export function Auth({ onSample }: { onSample: () => void }) {
           <div className="auth-mark">
             <ShieldCheck size={23} />
           </div>
-          <div className="eyebrow">YOUR BUSINESS, IN GOOD ORDER</div>
-          <h2>
+          <h1>
             {mode === "login"
               ? "Welcome to Feelina"
               : mode === "register"
                 ? "Become a retail partner"
                 : "Reset your password"}
-          </h2>
+          </h1>
           <p className="muted">
             {mode === "login"
               ? "Sign in to your workspace to pick up where you left off."
@@ -258,15 +278,6 @@ export function Auth({ onSample }: { onSample: () => void }) {
                 : "Back to sign in"}
             </button>
           </div>
-          <div className="auth-divider">
-            <span>Take a look around</span>
-          </div>
-          <button className="button secondary full" onClick={onSample}>
-            Explore sample workspace <ArrowRight size={16} />
-          </button>
-          <p className="fine-print">
-            Read-only sample data. No account required.
-          </p>
           {!configured && (
             <p className="fine-print">
               Live account access will be available once database configuration

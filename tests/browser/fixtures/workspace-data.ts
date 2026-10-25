@@ -6,7 +6,7 @@ import {
   type Customer,
   type Product,
   type Order,
-} from "./types";
+} from "../../../src/lib/types";
 const products: Product[] = [
   {
     id: "p1",
@@ -54,7 +54,7 @@ const customers: Customer[] = [
     id: "c1",
     name: "Meera Shah",
     shop_name: "The Comfort Store",
-    email: "retailer@example.com",
+    email: "retailer@example.com", // taste-skill-ignore: reserved domain keeps fictional sample contacts safe.
     phone: "",
     billing_address: "Ahmedabad, Gujarat",
     shipping_address: "Ahmedabad, Gujarat",
@@ -64,7 +64,7 @@ const customers: Customer[] = [
     id: "c2",
     name: "Aditi Jain",
     shop_name: "Aditi Intimates",
-    email: "retailer2@example.com",
+    email: "retailer2@example.com", // taste-skill-ignore: reserved domain keeps fictional sample contacts safe.
     phone: "",
     billing_address: "Jaipur, Rajasthan",
     shipping_address: "Jaipur, Rajasthan",
@@ -74,7 +74,7 @@ const customers: Customer[] = [
     id: "c3",
     name: "Kavya Rao",
     shop_name: "Everyday Essentials",
-    email: "retailer3@example.com",
+    email: "retailer3@example.com", // taste-skill-ignore: reserved domain keeps fictional sample contacts safe.
     phone: "",
     billing_address: "Pune, Maharashtra",
     shipping_address: "Pune, Maharashtra",

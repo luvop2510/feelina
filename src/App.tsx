@@ -1,5 +1,5 @@
 import { allowNavigation } from "./lib/useUnsavedChanges";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, type CSSProperties } from "react";
 import {
   LayoutDashboard,
   ClipboardList,
@@ -15,10 +15,10 @@ import {
   ArrowUpRight,
   RefreshCw,
   ShieldCheck,
-  CircleHelp,
   ChevronRight,
   Plus,
   Bell,
+  ChevronUp,
 } from "lucide-react";
 import { supabase, loadWorkspace } from "./lib/api";
 import {
@@ -28,9 +28,10 @@ import {
   today,
   type Workspace,
 } from "./lib/types";
-import { sampleWorkspace } from "./lib/sample";
 import { AppContext, useApp } from "./lib/context";
 import { Auth, ResetPassword } from "./components/Auth";
+import "./components/AccountMenu.css";
+import { Brand } from "./components/Brand";
 import { Badge, Busy, Empty, ErrorMessage } from "./components/ui";
 import { Orders, OrderEditor, OrderDetail } from "./components/Orders";
 import {
@@ -42,7 +43,7 @@ import {
   SettingsPage,
 } from "./components/Modules";
 const nav = [
-  { id: "dashboard", label: "Overview", icon: LayoutDashboard, roles: [] },
+  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, roles: [] },
   {
     id: "orders",
     label: "Orders",
@@ -96,11 +97,19 @@ const nav = [
 ];
 export default function App() {
   const [data, setData] = useState<Workspace>(emptyWorkspace);
-  const [sample, setSample] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [route, setRoute] = useState(location.hash.slice(1) || "dashboard");
   const [menu, setMenu] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const accountRef = useRef<HTMLDivElement>(null);
+  const accountTrigger = useRef<HTMLButtonElement>(null);
+  const loadGeneration = useRef(0);
+  const activeUserId = useRef<string | null>(null);
+  const profileLoaded = useRef(false);
+  const menuRef = useRef<HTMLElement>(null);
+  const menuTrigger = useRef<HTMLButtonElement>(null);
   const [toast, setToast] = useState("");
   const [signedIn, setSignedIn] = useState(false);
   const approvedRoute = useRef(false);
@@ -112,21 +121,26 @@ export default function App() {
     location.hash = r;
     setRoute(r);
     setMenu(false);
+    setAccountOpen(false);
     setTimeout(
       () => document.querySelector<HTMLElement>("main h1")?.focus(),
       50,
     );
   };
   async function reload() {
+    const generation = ++loadGeneration.current;
+    if (!profileLoaded.current) setLoading(true);
     setError("");
     try {
       const result = await loadWorkspace();
-      setData(result);
-      setSignedIn(!!result.profile);
+      if (generation === loadGeneration.current) {
+        profileLoaded.current = !!result.profile;
+        setData(result);
+      }
     } catch (e) {
-      setError((e as Error).message);
+      if (generation === loadGeneration.current) setError((e as Error).message);
     } finally {
-      setLoading(false);
+      if (generation === loadGeneration.current) setLoading(false);
     }
   }
   useEffect(() => {
@@ -134,18 +148,36 @@ export default function App() {
       setLoading(false);
       return;
     }
-    void reload();
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
+      const generation = ++loadGeneration.current;
+      const nextUserId = session?.user.id || null;
+      if (activeUserId.current !== nextUserId) {
+        activeUserId.current = nextUserId;
+        profileLoaded.current = false;
+        setData(emptyWorkspace);
+      }
       setSignedIn(!!session);
-      if (event === "PASSWORD_RECOVERY") navigate("reset-password");
-      if (event === "SIGNED_OUT") {
+      setError("");
+      if (!session) {
         setData(emptyWorkspace);
         setLoading(false);
-      } else setTimeout(() => void reload(), 0);
+        setAccountOpen(false);
+        return;
+      }
+      // Auth resolves before the profile request. Keep the access gate pending
+      // until that request completes, and discard loads from an older session.
+      if (!profileLoaded.current) setLoading(true);
+      if (event === "PASSWORD_RECOVERY") navigate("reset-password");
+      setTimeout(() => {
+        if (generation === loadGeneration.current) void reload();
+      }, 0);
     });
-    return () => subscription.unsubscribe();
+    return () => {
+      loadGeneration.current++;
+      subscription.unsubscribe();
+    };
   }, []);
   useEffect(() => {
     const change = () => {
@@ -159,27 +191,87 @@ export default function App() {
       currentRoute.current = next;
       setRoute(next);
       setMenu(false);
+      setTimeout(
+        () => document.querySelector<HTMLElement>("main h1")?.focus(),
+        50,
+      );
     };
     window.addEventListener("hashchange", change);
     return () => window.removeEventListener("hashchange", change);
   }, []);
   useEffect(() => {
+    if (!menu) return;
+    const sidebar = menuRef.current;
+    sidebar?.querySelector<HTMLButtonElement>("button")?.focus();
+    const onKey = (event: KeyboardEvent) => {
+      if (
+        event.key === "Escape" &&
+        !accountRef.current?.querySelector("#account-actions")
+      ) {
+        setMenu(false);
+        menuTrigger.current?.focus();
+      }
+      if (event.key === "Tab" && sidebar) {
+        const controls = [
+          ...sidebar.querySelectorAll<HTMLElement>(
+            "a[href], button:not([disabled])",
+          ),
+        ];
+        const first = controls[0],
+          last = controls[controls.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last?.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first?.focus();
+        }
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [menu]);
+  useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(""), 5000);
     return () => clearTimeout(t);
   }, [toast]);
-  const current = sample ? sampleWorkspace : data;
+  useEffect(() => {
+    if (!accountOpen) return;
+    const dismiss = (event: PointerEvent) => {
+      if (!accountRef.current?.contains(event.target as Node))
+        setAccountOpen(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setAccountOpen(false);
+        accountTrigger.current?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [accountOpen]);
+  const current = data;
   const can = (roles: string[]) =>
     !roles.length || roles.includes(current.profile?.role || "");
   async function signOut() {
-    if (!allowNavigation()) return;
-    if (sample) {
-      setSample(false);
+    if (signingOut || !allowNavigation()) return;
+    setSigningOut(true);
+    try {
+      const result = await supabase?.auth.signOut();
+      if (result?.error) throw result.error;
+      setAccountOpen(false);
       navigate("dashboard");
-      return;
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSigningOut(false);
     }
-    await supabase?.auth.signOut();
-    navigate("dashboard");
   }
   if (loading)
     return (
@@ -187,7 +279,7 @@ export default function App() {
         <Busy />
       </div>
     );
-  if (!sample && signedIn && data.profile?.must_change_password)
+  if (signedIn && data.profile?.must_change_password)
     return <ResetPassword required done={() => void reload()} />;
   if (route === "reset-password" && signedIn)
     return (
@@ -198,23 +290,42 @@ export default function App() {
         }}
       />
     );
-  if (!sample && !signedIn)
+  if (!signedIn)
     return (
       <>
         <ErrorMessage error={error} />
-        <Auth
-          onSample={() => {
-            setSample(true);
-            navigate("dashboard");
-          }}
-        />
+        <Auth />
       </>
     );
-  if (!sample && (!data.profile || data.profile.status !== "active"))
+  if (!data.profile)
     return (
       <div className="center-page">
         <div className="pending-card">
-          <div className="wordmark">feelina</div>
+          <h1>We couldn’t load your workspace</h1>
+          <p>Your account is signed in. Try loading the workspace again.</p>
+          <ErrorMessage error={error} />
+          <div className="account-retry-actions">
+            <button className="button primary" onClick={() => void reload()}>
+              Try again
+            </button>
+            <button
+              className="button secondary"
+              disabled={signingOut}
+              onClick={() => void signOut()}
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  if (data.profile.status !== "active")
+    return (
+      <div className="center-page">
+        <div className="pending-card">
+          <div className="wordmark">
+            <Brand />
+          </div>
           <ShieldCheck size={38} />
           <h1>
             {data.profile?.status === "pending"
@@ -241,7 +352,14 @@ export default function App() {
   const allowed = !currentNav || can(currentNav.roles);
   return (
     <AppContext.Provider
-      value={{ data: current, sample, reload, notify: setToast, navigate, can }}
+      value={{
+        data: current,
+        sample: false,
+        reload,
+        notify: setToast,
+        navigate,
+        can,
+      }}
     >
       <a
         className="skip-link"
@@ -257,22 +375,20 @@ export default function App() {
         className="app-shell"
         onClickCapture={(e) => {
           const a = (e.target as Element).closest('a[href^="#"]');
-          if (
-            a &&
-            a.getAttribute("href") !== "#main-content" &&
-            !allowNavigation()
-          ) {
+          if (a && a.getAttribute("href") !== "#main-content") {
             e.preventDefault();
-            e.stopPropagation();
-          } else if (a) {
-            approvedRoute.current = true;
+            navigate(a.getAttribute("href")!.slice(1));
           }
         }}
       >
-        <aside className={"sidebar " + (menu ? "is-open" : "")}>
+        <aside
+          id="workspace-navigation"
+          ref={menuRef}
+          className={"sidebar " + (menu ? "is-open" : "")}
+        >
           <div className="sidebar-brand">
             <a href="#dashboard" className="wordmark">
-              feelina<span>PARTNER WORKSPACE</span>
+              <Brand />
             </a>
             <button
               className="icon-button mobile-only"
@@ -283,15 +399,15 @@ export default function App() {
             </button>
           </div>
           <div className="workspace-label">
-            <span className="workspace-emblem">F</span>
+            <span className="workspace-emblem">
+              <Brand className="workspace-brand" />
+            </span>
             <div>
               <strong>Feelina workspace</strong>
-              <small>
-                {sample ? "Sample organisation" : "Business operations"}
-              </small>
+              <small>Business operations</small>
             </div>
           </div>
-          <div className="nav-caption">WORKSPACE</div>
+          <div className="nav-caption">Workspace</div>
           <nav aria-label="Main navigation">
             {nav
               .filter((n) => can(n.roles))
@@ -317,32 +433,42 @@ export default function App() {
                 </a>
               ))}
           </nav>
-          <div className="sidebar-bottom">
-            <div className="sidebar-note">
-              <CircleHelp size={18} />
-              <p>
-                Made for a smoother
-                <br />
-                <strong>business day.</strong>
-              </p>
-            </div>
+          <div className="sidebar-bottom" ref={accountRef}>
+            {accountOpen && (
+              <div
+                className="account-panel"
+                id="account-actions"
+                aria-label="Your account"
+              >
+                <strong>{current.profile?.full_name || "Your account"}</strong>
+                <span>{current.profile?.email}</span>
+                <span className="account-role">{current.profile?.role}</span>
+                <button
+                  className="button secondary full"
+                  disabled={signingOut}
+                  onClick={() => void signOut()}
+                >
+                  <LogOut size={17} aria-hidden="true" />
+                  {signingOut ? "Signing out…" : "Sign out"}
+                </button>
+              </div>
+            )}
             <button
               className="profile-button"
-              onClick={() => void signOut()}
-              title={sample ? "Exit sample workspace" : "Sign out"}
+              ref={accountTrigger}
+              onClick={() => setAccountOpen((open) => !open)}
+              aria-expanded={accountOpen}
+              aria-controls="account-actions"
+              title="Your account"
             >
               <span className="avatar">
                 {current.profile?.full_name?.slice(0, 1) || "F"}
               </span>
               <span>
-                <strong>
-                  {sample
-                    ? "Sample workspace"
-                    : current.profile?.full_name || "Your account"}
-                </strong>
-                <small>{sample ? "Exit sample" : current.profile?.role}</small>
+                <strong>{current.profile?.full_name || "Your account"}</strong>
+                <small>{current.profile?.role}</small>
               </span>
-              <LogOut size={16} />
+              <ChevronUp size={16} aria-hidden="true" />
             </button>
           </div>
         </aside>
@@ -359,10 +485,16 @@ export default function App() {
               <button
                 className="icon-button mobile-only"
                 aria-label="Open navigation"
+                ref={menuTrigger}
+                aria-expanded={menu}
+                aria-controls="workspace-navigation"
                 onClick={() => setMenu(true)}
               >
                 <Menu size={21} />
               </button>
+              <span className="mobile-only topbar-brand">
+                <Brand />
+              </span>
               <span className="topbar-label">Workspace</span>
               <ChevronRight size={14} />
               <strong>{currentNav?.label || "Orders"}</strong>
@@ -371,13 +503,7 @@ export default function App() {
               <span className="date-label">{date(today())}</span>
               <button
                 className="icon-button"
-                onClick={() =>
-                  sample
-                    ? setToast(
-                        "You are viewing a read-only sample. Sign in to use live business data.",
-                      )
-                    : void reload()
-                }
+                onClick={() => void reload()}
                 aria-label="Refresh workspace"
               >
                 <RefreshCw size={17} />
@@ -385,17 +511,6 @@ export default function App() {
               <span className="topbar-avatar">F</span>
             </div>
           </header>
-          {sample && (
-            <div className="sample-banner">
-              <span>
-                <strong>Sample workspace</strong> · Fictional data, read-only.
-                Explore the layout and workflows.
-              </span>
-              <button onClick={() => void signOut()}>
-                Go to sign in <ArrowUpRight size={14} />
-              </button>
-            </div>
-          )}
           <main id="main-content" className="page-content" tabIndex={-1}>
             <ErrorMessage error={error} />
             {!allowed ? (
@@ -429,8 +544,8 @@ export default function App() {
             )}
           </main>
           <footer className="workspace-footer">
-            <span>Feelina · thoughtfully connected</span>
-            <span>{sample ? "SAMPLE DATA" : "SECURE PARTNER WORKSPACE"}</span>
+            <span>Feelina partner workspace</span>
+            <span>Secure workspace</span>
           </footer>
         </div>
       </div>
@@ -450,7 +565,7 @@ export default function App() {
   );
 }
 function Dashboard() {
-  const { data, navigate, can, sample } = useApp();
+  const { data, navigate, can } = useApp();
   const active = data.orders.filter(
     (o) => o.status !== "cancelled" && o.status !== "draft",
   );
@@ -470,6 +585,19 @@ function Dashboard() {
     ["submitted", "confirmed", "processing", "packed"].includes(o.status),
   );
   const low = data.variants.filter((v) => v.stock - v.reserved < 10);
+  const pipeline = [
+    ["submitted", "Submitted"],
+    ["confirmed", "Confirmed"],
+    ["processing", "Processing"],
+    ["packed", "Packed"],
+    ["dispatched", "Dispatched"],
+    ["delivered", "Delivered"],
+  ].map(([status, label]) => ({
+    status,
+    label,
+    count: data.orders.filter((o) => o.status === status).length,
+  }));
+  const maxCount = Math.max(1, ...pipeline.map((item) => item.count));
   const rows = [...data.orders]
     .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))
     .slice(0, 5);
@@ -477,9 +605,8 @@ function Dashboard() {
     <>
       <div className="page-heading">
         <div>
-          <div className="eyebrow">YOUR BUSINESS AT A GLANCE</div>
-          <h1 tabIndex={-1}>A little clarity for your day.</h1>
-          <p>Keep every order, every size, and every next step in view.</p>
+          <h1 tabIndex={-1}>Dashboard</h1>
+          <p>Manage your orders, inventory and retail partners.</p>
         </div>
         {can(["owner", "admin", "sales", "retailer"]) && (
           <button
@@ -500,7 +627,7 @@ function Dashboard() {
         />
         <Stat
           label="Orders to fulfil"
-          value={String(pending.length).padStart(2, "0")}
+          value={String(pending.length)}
           detail="From submission to dispatch"
           icon={<ClipboardList size={18} />}
         />
@@ -512,99 +639,74 @@ function Dashboard() {
         />
         <Stat
           label="Low-stock variants"
-          value={String(low.length).padStart(2, "0")}
+          value={String(low.length)}
           detail="Fewer than 10 available units"
           icon={<Boxes size={18} />}
           warning={low.length > 0}
         />
       </div>
       <div className="dashboard-grid">
-        <section className="panel orders-panel">
+        <section className="panel fulfilment-panel">
           <div className="panel-header">
             <div>
-              <h2>Recent orders</h2>
-              <p>The latest from your retail partners.</p>
+              <h2>
+                <BarChart3 size={18} aria-hidden="true" /> Order pipeline
+              </h2>
+              <p>Orders at each stage of fulfilment</p>
             </div>
-            <button className="text-button" onClick={() => navigate("orders")}>
-              View all <ArrowUpRight size={15} />
+            <button
+              className="icon-button"
+              aria-label="View all orders"
+              onClick={() => navigate("orders")}
+            >
+              <ArrowUpRight size={17} />
             </button>
           </div>
-          {rows.length ? (
-            <div className="table-wrap" tabIndex={0} aria-label="Recent orders">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Order</th>
-                    <th>Customer</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>
-                      <span className="sr-only">Open</span>
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((o) => (
-                    <tr key={o.id}>
-                      <td>
-                        <button
-                          className="table-link"
-                          onClick={() => navigate("orders/" + o.id)}
-                        >
-                          {o.number}
-                        </button>
-                        <small>{date(o.order_date)}</small>
-                      </td>
-                      <td>
-                        <strong>
-                          {o.customer_snapshot?.shop_name ||
-                            data.customers.find((c) => c.id === o.customer_id)
-                              ?.shop_name ||
-                            "Customer"}
-                        </strong>
-                        <small>{o.order_type}</small>
-                      </td>
-                      <td className="numeric">{money(o.total_paise)}</td>
-                      <td>
-                        <Badge status={o.status} />
-                      </td>
-                      <td>
-                        <button
-                          className="icon-button"
-                          onClick={() => navigate("orders/" + o.id)}
-                          aria-label={"View order " + o.number}
-                        >
-                          <ChevronRight size={17} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <Empty title="Your first order starts here">
-              Add products and a customer, then enter quantities in the size
-              matrix.
-            </Empty>
-          )}
+          <div
+            className="pipeline-chart"
+            role="img"
+            aria-label={pipeline
+              .map((item) => `${item.label}: ${item.count}`)
+              .join(", ")}
+          >
+            {pipeline.map((item) => (
+              <div className="pipeline-column" key={item.status}>
+                <strong>{item.count}</strong>
+                <div className="pipeline-track">
+                  <div
+                    className="pipeline-bar"
+                    style={
+                      {
+                        "--bar-size": `${(item.count / maxCount) * 100}%`,
+                      } as CSSProperties
+                    }
+                  />
+                </div>
+                <span>{item.label}</span>
+              </div>
+            ))}
+          </div>
         </section>
         <section className="panel attention-panel">
           <div className="panel-header">
             <div>
-              <h2>Needs attention</h2>
+              <h2>
+                <Bell size={18} aria-hidden="true" /> Needs attention
+              </h2>
               <p>A few things to keep moving.</p>
             </div>
-            <Bell size={18} className="muted" />
           </div>
           <button className="attention-item" onClick={() => navigate("orders")}>
-            <span className="attention-icon plum">
+            <span className="attention-icon">
               <ClipboardList size={19} />
             </span>
             <span>
               <strong>
                 {data.orders.filter((o) => o.status === "submitted").length}{" "}
-                orders awaiting confirmation
+                {data.orders.filter((o) => o.status === "submitted").length ===
+                1
+                  ? "order awaiting confirmation"
+                  : "orders awaiting confirmation"}
               </strong>
               <small>Review quantities and reserve stock</small>
             </span>
@@ -615,7 +717,7 @@ function Dashboard() {
               className="attention-item"
               onClick={() => navigate("inventory")}
             >
-              <span className="attention-icon amber">
+              <span className="attention-icon">
                 <Boxes size={19} />
               </span>
               <span>
@@ -630,7 +732,7 @@ function Dashboard() {
               className="attention-item"
               onClick={() => navigate("settings")}
             >
-              <span className="attention-icon sage">
+              <span className="attention-icon">
                 <ShieldCheck size={19} />
               </span>
               <span>
@@ -649,43 +751,84 @@ function Dashboard() {
             </button>
           )}
           <div className="attention-foot">
-            A clear next step. A calmer workday.
+            Review pending orders before dispatch.
           </div>
         </section>
       </div>
-      <section className="collection-banner">
-        <div className="collection-copy">
-          <div className="eyebrow">THE FEELINA COLLECTION</div>
-          <h2>
-            Every size. Every shade.
-            <br />
-            <em>Everyday confidence.</em>
-          </h2>
-          <p>A considered collection, ready for your next order.</p>
-          <button className="text-button" onClick={() => navigate("catalogue")}>
-            Explore catalogue <ArrowRightIcon />
+      <section className="panel orders-panel">
+        <div className="panel-header">
+          <div>
+            <h2>
+              <ClipboardList size={18} aria-hidden="true" /> Recent orders
+            </h2>
+            <p>The latest from your retail partners.</p>
+          </div>
+          <button className="text-button" onClick={() => navigate("orders")}>
+            View all <ArrowUpRight size={15} />
           </button>
         </div>
-        <div className="swatches" aria-hidden="true">
-          <div className="swatch rose">
-            <span>ROSE</span>
+        {rows.length ? (
+          <div className="table-wrap" tabIndex={0} aria-label="Recent orders">
+            <table>
+              <thead>
+                <tr>
+                  <th>Order</th>
+                  <th>Customer</th>
+                  <th className="numeric">Amount</th>
+                  <th>Status</th>
+                  <th>
+                    <span className="sr-only">Open</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((o) => (
+                  <tr key={o.id}>
+                    <td>
+                      <button
+                        className="table-link"
+                        onClick={() => navigate("orders/" + o.id)}
+                      >
+                        {o.number}
+                      </button>
+                      <small>{date(o.order_date)}</small>
+                    </td>
+                    <td>
+                      <strong>
+                        {o.customer_snapshot?.shop_name ||
+                          data.customers.find((c) => c.id === o.customer_id)
+                            ?.shop_name ||
+                          "Customer"}
+                      </strong>
+                      <small>{o.order_type}</small>
+                    </td>
+                    <td className="numeric">{money(o.total_paise)}</td>
+                    <td>
+                      <Badge status={o.status} />
+                    </td>
+                    <td>
+                      <button
+                        className="icon-button"
+                        onClick={() => navigate("orders/" + o.id)}
+                        aria-label={"View order " + o.number}
+                      >
+                        <ChevronRight size={17} />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="swatch ivory">
-            <span>IVORY</span>
-          </div>
-          <div className="swatch charcoal">
-            <span>CHARCOAL</span>
-          </div>
-        </div>
-        <span className="collection-caption">
-          {sample ? "ILLUSTRATIVE COLLECTION" : "FEELINA ESSENTIALS"}
-        </span>
+        ) : (
+          <Empty title="Your first order starts here">
+            Add products and a customer, then enter quantities in the size
+            matrix.
+          </Empty>
+        )}
       </section>
     </>
   );
-}
-function ArrowRightIcon() {
-  return <ArrowUpRight size={16} />;
 }
 function Stat({
   label,
@@ -703,9 +846,12 @@ function Stat({
   return (
     <section className="stat-card">
       <div className="stat-label">
-        <span>{label}</span>
-        <span className={warning ? "stat-icon warning" : "stat-icon"}>
+        <span>
           {icon}
+          {label}
+        </span>
+        <span className={warning ? "stat-icon warning" : "stat-icon"}>
+          <ArrowUpRight size={13} />
         </span>
       </div>
       <strong className="stat-value">{value}</strong>

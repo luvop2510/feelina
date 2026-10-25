@@ -17,3 +17,5 @@ backups/
 .e2e*
 
 !.env.example
+
+.taste-skill/

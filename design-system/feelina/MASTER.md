@@ -1,58 +1,85 @@
-# Feelina design system
+# Feelina — Superior design system
 
-## Product thesis
-A calm trade desk for an intimate-apparel brand. The defining element is a spacious, editable size matrix that carries the retailer's familiar paper order into a precise digital workflow. Navigation and buttons remain conventional; brand identity lives in a restrained plum, a quiet wordmark, and precise typography.
+## Reference and scope
+The user-selected [Superior Framer project](https://framer.com/projects/Superior-copy--Wp5lgldoGPASM3zKBu7g-bFE1j?node=augiA20Il) is the source of the visual direction. Inspected in the user's signed-in Brave session, with its [public preview](https://superior-template.framer.website/) used to verify typography and color tokens. The template's pictured dashboard is a raster mockup, so its visual structure is implemented as working React components using Feelina's existing data and actions.
 
-## Scope and references
-Web application: Apple foundations apply; macOS menu bars and native iOS tab conventions do not. Consulted Apple HIG references: accessibility, layout, typography, color, designing-for-macos, buttons, entering-data, lists-and-tables and cross-platform. `entering-data.md › Best practices`: “When possible, offer choices instead of requiring text entry.” Products come from a searchable catalogue. `lists-and-tables.md › Content`: “Use descriptive column headings in a multicolumn table.” Explicit size headings and semantic tables preserve meaning.
+This replaces the prior plum/serif/fabric direction across all eight routes, auth and account gates, order creation/details, dialogs, forms, tables, badges, reports and print branding. React, Supabase, role gates and business calculations remain in place. The supplied template takes precedence over a random Taste Skill direction draw: no seed or redraw applies.
 
-UI/UX Pro Max searches for wholesale apparel order management and wholesale inventory dashboard returned useful flat functional styles but marketing page structures unrelated to order entry. Those structures were rejected, not persisted as recommendations. React controlled-form guidance applies. This bespoke system replaces generic industrial slate with a muted plum tied to the product's intimate-apparel identity; that brand choice is design judgment.
+## Product contract
+Feelina is a wholesale apparel workspace used by retailers and internal operations staff. The first dashboard question is: which orders and stock need action? Its primary action is Create order. The signature remains the eight-size ordering matrix, now inside Superior's neutral panels. Color marks stock/order signals; it does not decorate the navigation.
 
-## Semantic tokens
-| Token | Light | Dark | Role |
-|---|---|---|---|
-| canvas | #F6F5F7 | #19161C | Workspace background |
-| surface | #FFFFFF | #241F28 | Tables, panels, inputs |
-| ink | #27212A | #F4EFF5 | Primary content |
-| muted | #655D68 | #C0B5C5 | Secondary text |
-| accent | #713B64 | #DBADD0 | Primary actions and selection |
-| danger | #A52B39 | #FFB1BA | Errors, with explanatory text |
+Inventory of product-specific content:
+- Retailer shops and contacts, scoped by role.
+- Product SKU, name, photograph when available, category and colors.
+- Eight sizes: 30=S, 32=M, 34=L, 36=XL, 38=XXL, 40=XXXL, 42=4XL, 44=5XL.
+- MRP and selling rates kept separate.
+- Drafts, submitted orders and four further fulfilment stages.
+- Stock on hand, reserved and available by size/color.
+- Server-calculated money in paise, formatted in rupees.
+- Recorded payments, outstanding balances and credits.
+- Business verification and invoice eligibility.
+- Authenticated business access with separate test-only fixtures.
 
-Dark accent buttons use #241F28 text. Light accent uses white text. Verify contrast by executable token test; dividers are decorative, while inputs and focus indicators require stronger boundaries. Status chips always contain words.
+## Tokens
+| Role | Light | Dark |
+|---|---|---|
+| Canvas | #F6F6F8 | #111216 |
+| Surface | #FFFFFF | #1B1C20 |
+| Ink | #020A0F | #F5F6F7 |
+| Secondary text | #50565D | #B7BDC4 |
+| Primary action | #202024 | #F5F6F7 |
+| Text on action | #FFFFFF | #1B1C20 |
+| Panel border | #E6E6EB | #373A41 |
+| Control boundary | #898B93 | #777B85 |
+| Positive/data | #2D6E16 | #A6DB92 |
+| Error | #A52B39 | #FFB1BA |
 
-## Type and spacing
-System sans stack for UI and data; a Georgia serif wordmark only. Body 16px/1.5, table text 14px/1.5, metadata no smaller than 12px. Headings 24/32/40px; use 500–650 weight instead of excessive bold. Tabular figures for amounts and quantities. Spacing 4,8,12,16,24,32,48px. Controls ≥44 CSS px; compact matrix entries may use 40px minimum with clear spacing and native keyboard entry. Radius 8px controls, 12px panels. No ornamental gradients or blur.
+`tests/design.test.mjs` reads the actual CSS tokens and checks 12 text/background combinations at 4.5:1 or better. Statuses include visible words. The light tokens come from the Superior reference; the dark counterpart is an accessible adaptation, not a claim that the template supplies dark mode.
 
-## Layout
-A persistent desktop sidebar surrounds a single main workspace; compact screens use a toggleable navigation panel and a horizontally scrollable matrix within the page, never global horizontal overflow.
+## Type and geometry
+Inter is locally served at 400/500/600/700, matching the reference and avoiding font-network failures. The SIL Open Font License is included under `public/fonts/LICENSE.txt`. The supplied Feelina script logo, 24–26px page titles, 15–18px panel titles, 13–15px primary UI text, 11–12px metadata/axis labels. Numeric columns use tabular figures. Controls remain at least 44px tall (48px action buttons on phones), except the 40px size-matrix inputs with surrounding space.
 
-Regular:
+A 240px neutral sidebar borders an inset white sheet. At 1440px, content width is approximately 1128px: four equal summary cards plus three 16px gaps; the next row uses two equal panels with a 20px gap. Panel radius 12px, sheet radius 16px, control radius 7–8px. Fine borders replace shadows on resting content. Only native dialogs and notifications float with a shadow.
+
+Regular dashboard:
 ```
-| Feelina     | Context / account                  |
-| Overview    | Page title             Primary CTA |
-| Orders      | Summary / filters                  |
-| Catalogue   | Content table / size matrix        |
-| Customers   | Details                 Totals     |
-| Inventory   |                                    |
+| workspace | page name / date / refresh              |
+| nav       | Dashboard                  Create order |
+|           | value | fulfilment | balance | low stock|
+|           | order pipeline    | attention queue     |
+|           | recent orders, full-width table         |
 ```
 Compact:
 ```
-| Menu  Feelina                Account |
-| Page title                          |
-| Primary action                      |
-| Filters                             |
-| < size matrix scrolls internally >  |
-| Totals                              |
+| menu | actual logo | refresh |
+| title + create order       |
+| summary cards              |
+| horizontal pipeline bars   |
+| attention queue            |
+| scrollable order table     |
 ```
+The sidebar becomes a focus-contained drawer at 800px. At 360px and below summary cards stack to keep currency inside their bounds. Dense matrices/tables scroll inside labelled keyboard-accessible regions. No global horizontal scroll.
 
-## Components and states
-Use native labels, inputs, selects, buttons and tables. One primary action per screen. Search before catalogue selection; no manual product names on orders. Inline errors retain entered values. Native dialogs or equivalent trap focus, close on Escape and restore trigger focus. Async buttons prevent duplicate submissions; error messages include recovery. Empty states explain how to populate real records. Read-only sample data is prominently labelled and never persisted.
+## Screen questions
+- Dashboard: what needs action across orders and inventory?
+- Orders: which order should I review or create?
+- Catalogue: which product, color, size and price apply?
+- Customers: who is the retailer and what do they owe?
+- Inventory: which sizes are available or running low?
+- Payments: what was received and what remains outstanding?
+- Reports: which records match the selected period and customer?
+- Settings: which business details, accounts and rates apply?
+- Auth: how do I access or recover my workspace?
+- Order editor/detail: what quantities, totals and fulfilment actions apply to this order?
 
-## Print
-A4 portrait with small consistent margins, repeated matrix header, no navigation/actions. Exact size column order from brief. Brand header, ORDER FORM, company verification state, customer snapshot, terms, due date, totals and signatory. Tax invoice is a separate gated record. Numeric columns remain aligned. Multi-page row breaks avoided where possible.
+## Behavior and accessibility
+Apple foundations apply to this web application; native macOS menu-bar and iOS tab-bar conventions do not. Read references include accessibility, layout, typography, color, branding, sidebars, buttons, lists-and-tables and cross-platform guidance. `branding.md › Best practices`: “Express your brand with familiar components.” `lists-and-tables.md › Content`: “Use descriptive column headings in a multicolumn table.”
 
-## Motion and accessibility
-Only brief color/opacity feedback, 120–180ms. No entrance choreography: staff repeat these tasks all day. Respect prefers-reduced-motion, prefers-contrast, prefers-color-scheme and 200% zoom. No glass layer, so reduced transparency remains opaque. Visible 3px focus ring, skip link, semantic heading order, contextual labels on size inputs. Verify at 375px, landscape, tablet and desktop.
+Preserve semantic controls, labelled inputs, errors retaining data, disabled pending mutations, empty states, role restrictions, unsaved-draft warnings and server authority. Native dialogs close on Escape and restore focus. Mobile navigation closes even when choosing the current route, traps Tab, closes on Escape and moves focus to the destination heading. Hidden navigation is excluded from keyboard focus. Visible focus, system dark mode, increased contrast and reduced motion are supported. All surfaces are opaque; no reduced-transparency exception is needed.
 
-## Design self-critique
-A generic landing hero was removed because it delays order entry and communicates no operational information. No decorative charts without real data, fake growth percentages, customer avatars or testimonial copy. The matrix earns the visual emphasis; other elements stay quiet.
+A4 order/invoice layouts preserve the eight-size columns, totals, repeated headers, snapshot content and verification gates. No marketing assets, testimonials, fictional growth percentages or copied Superior customer identities appear in business records.
+
+## Assets and verification
+No stock photographs or template screenshots ship in the UI. Existing product photos render when provided; missing images say so. Auth shows a clearly labelled sample quantity row. The public sample workspace has been removed. Synthetic data is confined to tests/browser/fixtures. The supplied logo is used on sign-in, navigation, account gates, order PDFs and receipts.
+
+See `docs/REBRAND-VERIFICATION.md` for final visual critique, executed checks, inspector warnings and deployment evidence.

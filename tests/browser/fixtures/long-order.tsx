@@ -2,7 +2,7 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { AppContext } from "../../../src/lib/context";
-import { sampleWorkspace } from "../../../src/lib/sample";
+import { sampleWorkspace } from "./workspace-data";
 import { OrderDetail } from "../../../src/components/Orders";
 import type { OrderLine } from "../../../src/lib/types";
 import "../../../src/index.css";

@@ -31,11 +31,11 @@ Apply versioned SQL in `supabase/migrations` to a dedicated project. All new reg
 
 ## Before using real business records
 
-Supply the owner email, verified business details and the reference invoice; configure verified tax/size labels and real catalogue stock. Order drafts can be prepared before statutory configuration. Confirmation and tax invoices enforce verification gates. A read-only sample workspace, if opened, is an illustration rather than live business data.
+Supply the owner email, verified business details and the reference invoice; configure verified tax/size labels and real catalogue stock. Order drafts can be prepared before statutory configuration. Confirmation and tax invoices enforce verification gates. The approved size chart is 30=S, 32=M, 34=L, 36=XL, 38=XXL, 40=XXXL, 42=4XL, 44=5XL.
 
 ## Deployment
 
-`npm run build` emits `dist`. Vercel settings and security headers live in `vercel.json`. Set the two public Supabase variables in the deployment environment and set `VITE_SUPABASE_READY=true` only after applying and verifying the migration. Until then live sign-in stays gated and the read-only sample remains accessible. The database is independent of web deployments and is not reset when the site is redeployed. Configure Supabase Auth site URL and approved redirect URLs to the final company domain before email confirmation/recovery is used.
+`npm run build` emits `dist`. Vercel settings and security headers live in `vercel.json`. Set the two public Supabase variables in the deployment environment and set `VITE_SUPABASE_READY=true` only after applying and verifying the migration. Until then live sign-in stays gated. Public sample access has been removed; synthetic fixtures exist only in browser tests. The database is independent of web deployments and is not reset when the site is redeployed. Configure Supabase Auth site URL and approved redirect URLs to the final company domain before email confirmation/recovery is used.
 
 ## Google login
 
