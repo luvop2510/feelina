@@ -59,3 +59,12 @@ Finding 9 has revised logical backup/restore scripts preserving ACLs and custom 
 The final Supabase security advisor query reports 15 authenticated SECURITY DEFINER RPC warnings and no other security lint. These functions deliberately expose guarded business transactions while direct table writes are denied; fixed search paths and active-role checks are required controls, not a reason to ignore future new warnings. [Advisor explanation and remediation](https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable).
 
 Google credentials were deferred by the user. A visible button and mocked authorization redirect test do not demonstrate real Google authentication. Follow `docs/AUTH.md` before marking that provider accepted.
+
+
+## Account management review — 25 October 2026
+
+An independent review identified and corrected two issues before delivery: stored password-hash rewrites could incorrectly clear the first-password flag, and editable retry forms could report success with a password different from the original issued identity. Completion now requires a successful caller-authenticated Auth password update followed by a service-only RPC; creation retries retain their original form payload. Live testing additionally caught Auth attaching app metadata after the insert trigger; the service now sets the password gate explicitly while the identity is pending, before role activation.
+
+The latest advisor run reports 16 intentionally authenticated SECURITY DEFINER RPCs plus disabled Auth leaked-password protection. The new management RPC has the same active-role, owner-boundary and fixed-path controls. The password-completion RPC is executable only by service_role. No anonymous function or table access was introduced. Leaked-password protection remains an outstanding provider configuration item; the application enforces length and first-password replacement, which do not replace breach-list checks.
+
+Hosted stock/payment contention and the disposable account-management journey have now been exercised. Company-controlled off-site restoration, real email delivery, original invoice approval and Google provider activation remain open acceptance items.

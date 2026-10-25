@@ -7,7 +7,7 @@ const db=new PGlite();
 const ids=Object.fromEntries(['owner','admin','sales','retailer','other','pending','inventory','accounts','fulfilment'].map(k=>[k,randomUUID()]));
 const rpc=async(name,args=[])=>{const res=await db.query(`select public.${name}(${args.map((_,i)=>'$'+(i+1)).join(',')}) value`,args.map(x=>typeof x==='object'&&x!==null?JSON.stringify(x):x));return res.rows[0].value};
 const as=async(role)=>{await db.exec('reset role');await db.query("select set_config('request.jwt.claim.sub',$1,false)",[ids[role]]);await db.exec('set role authenticated');};
-await db.exec(`create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb default '{}');create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;`);
+await db.exec(`create role anon; create role authenticated; create role service_role; create schema auth; create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb default '{}', raw_app_meta_data jsonb default '{}', encrypted_password text);create function auth.uid() returns uuid language sql stable as $$ select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;grant usage on schema auth to authenticated;grant execute on function auth.uid() to authenticated;`);
 // Storage service tables are emulated only to exercise database policies. MIME/size
 // enforcement by the hosted Storage API is verified separately against the cloud.
 await db.exec(`create schema storage;
@@ -141,6 +141,42 @@ test('matrix positions and server text limits survive save and reject oversized 
  const positions=(await db.query('select product_id,position from public.order_lines where order_id=$1 order by position',[o])).rows;assert.deepEqual(positions.map(x=>x.product_id),[second,product]);
  await assert.rejects(rpc('save_order',[{...payload(),notes:'x'.repeat(140000)}]),/data limit/);
  await assert.rejects(rpc('save_customer',[{name:'Bounds',billing_address:'x'.repeat(2001)}]),/customer_text_bounds/);
+});
+
+test('team directory changes are atomic, usernames unique and administrator escalation denied',async()=>{
+ await rpc('manage_team_user',[ids.sales,'sales.user','staff','Sales Person','sales','active',null]);
+ await assert.rejects(rpc('manage_team_user',[ids.inventory,'sales.user','staff','Stock Person','accounts','active',null]),/unique/);
+ assert.equal((await db.query('select role from public.profiles where id=$1',[ids.inventory])).rows[0].role,'inventory');
+ await rpc('manage_team_user',[ids.sales,'sales.user','staff','Sales Person','sales','suspended',null]);
+ await rpc('manage_team_user',[ids.sales,'sales.user','staff','Sales Person','sales','active',null,true]);
+ assert.equal((await db.query('select status from public.profiles where id=$1',[ids.sales])).rows[0].status,'suspended');
+ await as('admin'); await assert.rejects(rpc('manage_team_user',[ids.sales,'sales.user','staff','Sales Person','owner','active',null]),/Only an owner/);
+ await as('retailer'); await assert.rejects(rpc('manage_team_user',[ids.retailer,'retailer','retailer','Retailer','owner','active',customer]),/permission/);
+});
+test('issued passwords lock server business access until an actual password replacement',async()=>{
+ await db.exec('reset role');
+ const issued=randomUUID(); const spoofed=randomUUID();
+ await db.query("insert into auth.users(id,email,raw_app_meta_data,encrypted_password) values($1,'issued@example.invalid','{\"feelina_password_issued\":true}','initial-hash')",[issued]);
+ await db.query("insert into auth.users(id,email,raw_user_meta_data) values($1,'spoofed@example.invalid','{\"must_change_password\":false,\"role\":\"owner\"}')",[spoofed]);
+ await db.query("update public.profiles set role='owner',status='active' where id=$1",[issued]);
+ await db.query("select set_config('request.jwt.claim.sub',$1,false)",[issued]); await db.exec('set role authenticated');
+ assert.equal((await db.query('select * from public.products')).rows.length,0);
+ assert.equal((await db.query('select must_change_password from public.profiles where id=$1',[issued])).rows[0].must_change_password,true);
+ await assert.rejects(rpc('save_customer',[{name:'Forbidden'}]),/permission/);
+ await assert.rejects(db.exec('update public.profiles set must_change_password=false'),/permission/);
+ await db.exec('reset role'); await db.query("update auth.users set raw_user_meta_data='{\"must_change_password\":false}' where id=$1",[issued]);
+ assert.equal((await db.query('select must_change_password from public.profiles where id=$1',[issued])).rows[0].must_change_password,true);
+ await db.query("update auth.users set encrypted_password='reencrypted-hash' where id=$1",[issued]);
+ assert.equal((await db.query('select must_change_password from public.profiles where id=$1',[issued])).rows[0].must_change_password,true);
+ await db.exec('set role authenticated');
+ await assert.rejects(rpc('complete_initial_password_change',[issued]),/permission/);
+ await db.exec('reset role; set role service_role');
+ await rpc('complete_initial_password_change',[issued]);
+ await db.exec('reset role');
+ assert.equal((await db.query('select must_change_password from public.profiles where id=$1',[issued])).rows[0].must_change_password,false);
+ await db.exec('set role authenticated'); assert.ok((await db.query('select * from public.products')).rows.length>0);
+ await db.exec('reset role'); assert.equal((await db.query('select role,status from public.profiles where id=$1',[spoofed])).rows[0].role,'retailer');
+ await as('owner');
 });
 
 test('database backup reload preserves orders, payments and stock',async()=>{await db.exec('reset role');const before=await db.query('select count(*)::int n from public.orders');const backup=await db.dumpDataDir();const restored=new PGlite({loadDataDir:backup});assert.deepEqual((await restored.query('select count(*)::int n from public.orders')).rows,before.rows);assert.equal((await restored.query('select count(*)::int n from public.payments')).rows[0].n,1);assert.equal((await restored.query("select stock from public.variants where size='30'")).rows[0].stock,10);await restored.close();await db.close();});

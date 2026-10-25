@@ -43,7 +43,7 @@ The chosen SPA architecture uses Supabase client sessions rather than an HTTP-on
 
 ## Authentication operations
 
-Keep email verification enabled for real retailer registration. Configure production redirect allowlists narrowly. Provider rate limits, SMTP delivery, password reset and optional MFA need deployment configuration and live checks. Do not claim email deliverability from a successful local test. Never grant initial owner access based on being the first registered account. The owner email is pending; bootstrap must match an explicitly confirmed account through trusted database administration.
+Keep email verification enabled for real retailer registration. Configure production redirect allowlists narrowly. Provider rate limits, SMTP delivery, password reset and optional MFA need deployment configuration and live checks. Do not claim email deliverability from a successful local test. Never grant initial owner access based on being the first registered account. The three explicitly designated owners were provisioned through trusted administration; each must replace their issued password before business access. See `ACCOUNT_MANAGEMENT.md`.
 
 ## Data handling and retention
 

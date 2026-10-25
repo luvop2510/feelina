@@ -12,6 +12,10 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.9.6
+      - run: deno test --frozen --config supabase/functions/deno.json --allow-env supabase/functions/manage-users/index_test.ts
       - run: npm test
       - run: npm run build
       - run: npm audit --omit=dev --audit-level=high

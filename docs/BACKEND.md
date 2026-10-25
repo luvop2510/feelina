@@ -21,7 +21,7 @@ update public.profiles set role = 'owner', status = 'active'
 where id = (select id from auth.users where email = 'OWNER_EMAIL');
 ```
 
-Do not run this with a guessed email, expose it as an application endpoint, or make the first registrant the owner. Other roles are administered through `update_profile`. Administrators cannot appoint or manage administrators/owners; the last active owner is protected.
+Do not run this with a guessed email, expose it as an application endpoint, or make the first registrant the owner. The three explicitly requested owners have now been provisioned. Subsequent account creation and directory management use the owner-facing Accounts page, the authenticated `manage-users` Edge Function and `manage_team_user`; see `ACCOUNT_MANAGEMENT.md`. Administrators cannot appoint or manage administrators/owners; the last active owner is protected.
 
 ## Tables and operational semantics
 

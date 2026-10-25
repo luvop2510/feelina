@@ -1858,6 +1858,7 @@ tbody tr:hover {
   tr {
     break-inside: avoid;
   }
+  .document-closing,
   .document-header,
   .document-meta,
   .document-totals,
@@ -1880,6 +1881,11 @@ tbody tr:hover {
   }
   .document-signature {
     flex-direction: row;
+  }
+  .print-matrix tfoot td:last-child,
+  .document-totals dd {
+    white-space: nowrap;
+    overflow-wrap: normal;
   }
   .page-heading {
     display: block;

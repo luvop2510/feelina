@@ -423,3 +423,9 @@ site_url = "https://feelina.vercel.app"
 additional_redirect_urls = ["https://feelina.vercel.app/", "https://feelina.vercel.app/#reset-password"]
 [remotes.production.db.seed]
 enabled = false
+
+# This handler verifies every bearer token with Auth getUser before any operation.
+# Manual verification supports the project's asymmetric signing keys.
+[functions.manage-users]
+verify_jwt = false
+entrypoint = "./functions/manage-users/index.ts"

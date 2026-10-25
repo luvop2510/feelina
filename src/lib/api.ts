@@ -130,7 +130,8 @@ export async function loadWorkspace(): Promise<Workspace> {
     .eq("id", user.id)
     .single();
   if (error) throw error;
-  if (profile.status !== "active") return { ...emptyWorkspace, profile };
+  if (profile.status !== "active" || profile.must_change_password)
+    return { ...emptyWorkspace, profile };
   const names = [
     "profiles",
     "customers",
@@ -192,4 +193,47 @@ export async function uploadProductImage(file: File, productId: string) {
   if (error) throw new Error(error.message);
   return supabase.storage.from("product-images").getPublicUrl(path).data
     .publicUrl;
+}
+
+export async function createTeamUser(payload: {
+  request_id: string;
+  email: string;
+  username: string;
+  password: string;
+  full_name: string;
+  role: string;
+  customer_id: string | null;
+  partner_type: string;
+}) {
+  if (!supabase) throw new Error("The secure database is not configured.");
+  const { data, error } = await supabase.functions.invoke("manage-users", {
+    body: { action: "create", ...payload },
+  });
+  if (error) {
+    let message =
+      "The account could not be created. Check the details and try again.";
+    if (error.context instanceof Response) {
+      const body = await error.context.json().catch(() => null);
+      if (typeof body?.error === "string") message = body.error;
+    } else if (error.message) message = error.message;
+    throw new Error(message);
+  }
+  if (data?.error) throw new Error(String(data.error));
+  return data as { id: string };
+}
+
+export async function replaceInitialPassword(password: string) {
+  if (!supabase) throw new Error("The secure database is not configured.");
+  const { data, error } = await supabase.functions.invoke("manage-users", {
+    body: { action: "change-initial-password", password },
+  });
+  if (error) {
+    const body =
+      error.context instanceof Response
+        ? await error.context.json().catch(() => null)
+        : null;
+    throw new Error(body?.error || "Password update failed. Try again.");
+  }
+  if (!data?.changed)
+    throw new Error("Password update could not be confirmed.");
 }

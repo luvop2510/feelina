@@ -200,3 +200,33 @@ test("Google sign-in starts a PKCE flow at Supabase with the approved callback",
   expect(query.get("code_challenge")).toBeTruthy();
   expect(query.get("prompt")).toBe("select_account");
 });
+
+test("100 long product rows print on A4 without clipping or losing the final totals", async ({
+  page,
+}) => {
+  await page.goto("/tests/browser/fixtures/long-order.html");
+  await expect(page.locator(".order-document .matrix tbody tr")).toHaveCount(
+    100,
+  );
+  await page.emulateMedia({ media: "print" });
+  await expect(page.locator(".sidebar")).toBeHidden();
+  await expect(
+    page.getByText("PRINT-END-MARKER", { exact: false }),
+  ).toBeVisible();
+  const pdf = await page.pdf({
+    path: "test-results/long-order.pdf",
+    format: "A4",
+    printBackground: true,
+    preferCSSPageSize: true,
+  });
+  // Chromium emits uncompressed page dictionaries even when content streams are compressed.
+  const pageCount = (pdf.toString("latin1").match(/\/Type\s*\/Page\b/g) || [])
+    .length;
+  expect(pageCount).toBeGreaterThan(2);
+  expect(pageCount).toBeLessThan(25);
+  expect(
+    await page
+      .locator(".order-document")
+      .evaluate((element) => element.scrollWidth <= element.clientWidth),
+  ).toBe(true);
+});

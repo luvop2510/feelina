@@ -11,10 +11,10 @@ import { useApp } from "../lib/context";
 import {
   saveProduct,
   uploadProductImage,
+  createTeamUser,
   adjustStock,
   recordPayment,
   saveSettings,
-  updateProfile,
   rpc,
 } from "../lib/api";
 import {
@@ -215,6 +215,7 @@ function ProductForm({
   const [productId] = useState(() => product?.id || crypto.randomUUID());
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploadedImage, setUploadedImage] = useState("");
+  const [fileError, setFileError] = useState("");
   const [variants, setVariants] = useState<
     { colour: string; size: string; stock: number }[]
   >(product ? [] : SIZES.map((size) => ({ colour: "", size, stock: 0 })));
@@ -269,21 +270,39 @@ function ProductForm({
               type="url"
               name="image_url"
               defaultValue={product?.image_url}
+              disabled={Boolean(imageFile) || m.busy}
             />
           </Field>
           <Field
-            label="Upload catalogue image"
-            hint="JPEG, PNG or WebP, up to 5 MB. Catalogue photos are public."
+            label="Upload product image"
+            hint="JPEG, PNG or WebP, up to 5 MB. Uploads when you save. Product photos are public catalogue assets."
           >
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp"
+              accept="image/png,image/jpeg,image/webp"
+              disabled={m.busy}
               onChange={(e) => {
-                setImageFile(e.target.files?.[0] || null);
+                const file = e.target.files?.[0] || null;
+                setFileError("");
+                if (
+                  file &&
+                  (!["image/jpeg", "image/png", "image/webp"].includes(
+                    file.type,
+                  ) ||
+                    file.size > 5 * 1024 * 1024 ||
+                    file.size === 0)
+                ) {
+                  setFileError("Choose a JPEG, PNG or WebP image up to 5 MB.");
+                  e.target.value = "";
+                  setImageFile(null);
+                  return;
+                }
+                setImageFile(file);
                 setUploadedImage("");
               }}
             />
           </Field>
+          <ErrorMessage error={fileError} />
           <Field label="MRP (₹)">
             <input
               type="number"
@@ -1151,6 +1170,7 @@ export function SettingsPage() {
   const { data, can } = useApp();
   const [tab, setTab] = useState("business");
   const [account, setAccount] = useState<Row | null>(null);
+  const [createAccount, setCreateAccount] = useState(false);
   const [price, setPrice] = useState(false);
   const [priceEdit, setPriceEdit] = useState<Row | null>(null);
   const m = useMutation();
@@ -1278,45 +1298,77 @@ export function SettingsPage() {
         </form>
       )}
       {tab === "accounts" && (
-        <section className="panel table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Account</th>
-                <th>Role</th>
-                <th>Status</th>
-                <th>Customer</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.profiles.map((p) => (
-                <tr key={p.id}>
-                  <td>
-                    <strong>{p.full_name}</strong>
-                    <small>{p.email}</small>
-                  </td>
-                  <td>{title(p.role)}</td>
-                  <td>
-                    <Badge status={p.status} />
-                  </td>
-                  <td>
-                    {data.customers.find((c) => c.id === p.customer_id)
-                      ?.shop_name || "—"}
-                  </td>
-                  <td>
-                    <button
-                      className="text-button"
-                      onClick={() => setAccount(p)}
-                    >
-                      Manage access
-                    </button>
-                  </td>
+        <>
+          <div className="panel-header">
+            <div>
+              <h2>Team & partner accounts</h2>
+              <p>
+                Roles control access. Partner categories describe the
+                relationship.
+              </p>
+            </div>
+            <button
+              className="button primary"
+              onClick={() => setCreateAccount(true)}
+            >
+              <Plus size={16} />
+              Create user
+            </button>
+          </div>
+          <section className="panel table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Account</th>
+                  <th>Partner category</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Customer</th>
+                  <th>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+              </thead>
+              <tbody>
+                {data.profiles.map((p) => (
+                  <tr key={p.id}>
+                    <td>
+                      <strong>{p.full_name}</strong>
+                      <small>{p.email}</small>
+                      {p.username && <small>@{p.username}</small>}
+                    </td>
+                    <td>
+                      {title(
+                        p.partner_type ||
+                          (p.role === "retailer" ? "retailer" : "staff"),
+                      )}
+                    </td>
+                    <td>{title(p.role)}</td>
+                    <td>
+                      <Badge status={p.status} />
+                    </td>
+                    <td>
+                      {data.customers.find((c) => c.id === p.customer_id)
+                        ?.shop_name || "—"}
+                    </td>
+                    <td>
+                      <button
+                        className="text-button"
+                        onClick={() => setAccount(p)}
+                        disabled={
+                          !can(["owner"]) && ["owner", "admin"].includes(p.role)
+                        }
+                      >
+                        Manage access
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </section>
+        </>
+      )}
+      {createAccount && (
+        <CreateAccount onClose={() => setCreateAccount(false)} />
       )}
       {tab === "prices" && (
         <section className="panel form-panel">
@@ -1398,18 +1450,61 @@ export function SettingsPage() {
               e.preventDefault();
               const f = formValues(e);
               void m.run(
-                () =>
-                  updateProfile(
-                    account.id,
-                    String(f.role),
-                    String(f.status),
-                    String(f.customer_id) || null,
-                  ),
+                async () => {
+                  await rpc("manage_team_user", {
+                    p_user_id: account.id,
+                    p_username: String(f.username),
+                    p_partner_type: String(f.partner_type),
+                    p_full_name: String(f.full_name),
+                    p_role: String(f.role),
+                    p_status: String(f.status),
+                    p_customer_id: String(f.customer_id) || null,
+                  });
+                },
                 "Account access updated.",
                 () => setAccount(null),
               );
             }}
           >
+            <Field label="Full name">
+              <input
+                name="full_name"
+                defaultValue={account.full_name}
+                required
+                maxLength={120}
+              />
+            </Field>
+            <Field
+              label="Username / directory ID"
+              hint="People still sign in using their email address."
+            >
+              <input
+                name="username"
+                defaultValue={account.username || ""}
+                pattern="[A-Za-z0-9_.-]{3,40}"
+                minLength={3}
+                maxLength={40}
+                autoComplete="off"
+                required
+              />
+            </Field>
+            <Field label="Partner category">
+              <select
+                name="partner_type"
+                defaultValue={
+                  account.partner_type ||
+                  (account.role === "retailer" ? "retailer" : "staff")
+                }
+              >
+                {["staff", "retailer", "distributor", "investor", "other"].map(
+                  (p) => (
+                    <option key={p} value={p}>
+                      {title(p)}
+                    </option>
+                  ),
+                )}
+              </select>
+            </Field>
             <Field label="Role">
               <select name="role" defaultValue={account.role}>
                 {ROLES.filter(
@@ -1513,5 +1608,162 @@ export function SettingsPage() {
         </Modal>
       )}
     </>
+  );
+}
+
+function CreateAccount({ onClose }: { onClose: () => void }) {
+  const { data, can } = useApp();
+  const m = useMutation();
+  const [role, setRole] = useState("retailer");
+  const [submitted, setSubmitted] = useState<
+    Parameters<typeof createTeamUser>[0] | null
+  >(null);
+  const [requestId] = useState(() => crypto.randomUUID());
+  return (
+    <Modal title="Create a team or partner account" onClose={onClose} wide>
+      <p className="info-note">
+        Use the person’s own email address. They sign in by email and must
+        replace the initial password on first access. Share the initial password
+        securely outside this workspace.
+      </p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          const f = formValues(e);
+          const payload = submitted || {
+            request_id: requestId,
+            email: String(f.email).trim(),
+            username: String(f.username).trim(),
+            password: String(f.password),
+            full_name: String(f.full_name).trim(),
+            role,
+            customer_id: String(f.customer_id) || null,
+            partner_type: String(f.partner_type),
+          };
+          setSubmitted(payload);
+          void m.run(
+            () => createTeamUser(payload),
+            "Account created. The user must change their initial password at first sign-in.",
+            onClose,
+          );
+        }}
+      >
+        <fieldset
+          className="form-grid"
+          disabled={Boolean(submitted) || m.busy}
+          style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}
+        >
+          <Field label="Full name">
+            <input
+              name="full_name"
+              autoComplete="name"
+              required
+              maxLength={120}
+            />
+          </Field>
+          <Field label="Email address">
+            <input
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              maxLength={254}
+            />
+          </Field>
+          <Field
+            label="Username / directory ID"
+            hint="3–40 letters, numbers, dots, underscores or hyphens. Email is used for sign-in."
+          >
+            <input
+              name="username"
+              autoComplete="off"
+              pattern="[A-Za-z0-9_.-]{3,40}"
+              minLength={3}
+              maxLength={40}
+              required
+            />
+          </Field>
+          <Field
+            label="Initial password"
+            hint="At least 12 characters. The user must change it before accessing business records."
+          >
+            <input
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              minLength={12}
+              maxLength={128}
+              required
+            />
+          </Field>
+          <Field label="Access role">
+            <select
+              name="role"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+            >
+              {ROLES.filter(
+                (r) => can(["owner"]) || !["owner", "admin"].includes(r),
+              ).map((r) => (
+                <option key={r} value={r}>
+                  {title(r)}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <Field
+            label="Partner category"
+            hint="Category does not grant permissions. Assign the narrowest access role needed."
+          >
+            <select name="partner_type" defaultValue="retailer">
+              {["staff", "retailer", "distributor", "investor", "other"].map(
+                (p) => (
+                  <option key={p} value={p}>
+                    {title(p)}
+                  </option>
+                ),
+              )}
+            </select>
+          </Field>
+          <Field
+            label="Linked customer profile"
+            hint={
+              role === "retailer"
+                ? "Required for retailer access, including distributors using the retailer role."
+                : "Leave unlinked for internal staff."
+            }
+            className="span-2"
+          >
+            <select name="customer_id" required={role === "retailer"}>
+              <option value="">No customer linked</option>
+              {data.customers.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.shop_name} · {c.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </fieldset>
+        {submitted && m.error && (
+          <p className="info-note">
+            Retry uses the original details and initial password. Close this
+            form to start a different request; review Team accounts first if an
+            identity was already created.
+          </p>
+        )}
+        <ErrorMessage error={m.error} />
+        <div className="modal-actions">
+          <button
+            type="button"
+            className="button secondary"
+            onClick={onClose}
+            disabled={m.busy}
+          >
+            Cancel
+          </button>
+          <Submit busy={m.busy}>Create user</Submit>
+        </div>
+      </form>
+    </Modal>
   );
 }

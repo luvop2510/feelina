@@ -23,3 +23,7 @@ No frontend redeploy is required after provider activation: the button checks cu
 The client persists the Supabase session and refreshes it. API reads validate the current user, while database policies check the current profile's active status. OAuth errors are rendered as escaped text; a failed provider check leaves the email form available. Password recovery uses a separate reset screen and Supabase's recovery event. Production email delivery, reset-link expiry/reuse and Google's full callback still require real recipient/provider verification.
 
 References: [Supabase Google OAuth](https://supabase.com/docs/guides/auth/social-sign-in/auth-google), [Supabase PKCE flow](https://supabase.com/docs/guides/auth/sessions/pkce-flow), [OAuth client API](https://supabase.com/docs/reference/javascript/auth-signinwithoauth).
+
+## Owner-issued accounts
+
+The three designated owners are active, with mandatory initial password replacement. Owners can create accounts and manage roles under Settings → Accounts. Email is used for sign-in; usernames identify directory entries. See `ACCOUNT_MANAGEMENT.md` for the server-enforced password gate and retry behavior.

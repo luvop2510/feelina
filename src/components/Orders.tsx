@@ -1093,97 +1093,99 @@ export function OrderDetail({ id }: { id: string }) {
             }
           />
         </div>
-        <div className="document-totals">
-          <div>
-            <span>AMOUNT IN WORDS</span>
-            <p>{amountWords(documentOrder.total_paise)}</p>
-            {documentOrder.notes && (
-              <>
-                <span>NOTES</span>
-                <p>{documentOrder.notes}</p>
-              </>
-            )}
-            <span>PAYMENT & DELIVERY TERMS</span>
-            <p>{settings.payment_terms || "As agreed with the customer."}</p>
-            {documentOrder.dispatch_details && (
-              <p>Dispatch: {documentOrder.dispatch_details}</p>
-            )}
-          </div>
-          <dl>
-            {Number(documentOrder.paid_paise) +
-              Number(documentOrder.credit_paise || 0) >
-              Number(documentOrder.total_paise) && (
-              <div>
-                <dt>Credit / refund owed</dt>
-                <dd>
-                  {money(
-                    Number(documentOrder.paid_paise) +
-                      Number(documentOrder.credit_paise || 0) -
-                      Number(documentOrder.total_paise),
-                  )}
-                </dd>
-              </div>
-            )}
+        <div className="document-closing">
+          <div className="document-totals">
             <div>
-              <dt>Subtotal</dt>
-              <dd>{money(documentOrder.subtotal_paise)}</dd>
+              <span>AMOUNT IN WORDS</span>
+              <p>{amountWords(documentOrder.total_paise)}</p>
+              {documentOrder.notes && (
+                <>
+                  <span>NOTES</span>
+                  <p>{documentOrder.notes}</p>
+                </>
+              )}
+              <span>PAYMENT & DELIVERY TERMS</span>
+              <p>{settings.payment_terms || "As agreed with the customer."}</p>
+              {documentOrder.dispatch_details && (
+                <p>Dispatch: {documentOrder.dispatch_details}</p>
+              )}
             </div>
-            <div>
-              <dt>Discount</dt>
-              <dd>− {money(documentOrder.discount_paise)}</dd>
-            </div>
-            {settings.tax_mode === "cgst_sgst" ? (
-              <>
+            <dl>
+              {Number(documentOrder.paid_paise) +
+                Number(documentOrder.credit_paise || 0) >
+                Number(documentOrder.total_paise) && (
                 <div>
-                  <dt>CGST</dt>
-                  <dd>{money(Math.floor(documentOrder.tax_paise / 2))}</dd>
-                </div>
-                <div>
-                  <dt>SGST</dt>
+                  <dt>Credit / refund owed</dt>
                   <dd>
                     {money(
-                      documentOrder.tax_paise -
-                        Math.floor(documentOrder.tax_paise / 2),
+                      Number(documentOrder.paid_paise) +
+                        Number(documentOrder.credit_paise || 0) -
+                        Number(documentOrder.total_paise),
                     )}
                   </dd>
                 </div>
-              </>
-            ) : (
+              )}
               <div>
-                <dt>{settings.tax_mode === "igst" ? "IGST" : "Tax"}</dt>
-                <dd>{money(documentOrder.tax_paise)}</dd>
+                <dt>Subtotal</dt>
+                <dd>{money(documentOrder.subtotal_paise)}</dd>
               </div>
-            )}
-            <div className="grand-total">
-              <dt>Total</dt>
-              <dd>{money(documentOrder.total_paise)}</dd>
-            </div>
-            <div>
-              <dt>Paid</dt>
-              <dd>{money(documentOrder.paid_paise)}</dd>
-            </div>
-            <div>
-              <dt>Return credits</dt>
-              <dd>{money(documentOrder.credit_paise || 0)}</dd>
-            </div>
-            <div>
-              <dt>Outstanding</dt>
-              <dd>
-                {money(
-                  Math.max(
-                    0,
-                    documentOrder.total_paise -
-                      documentOrder.paid_paise -
-                      Number(documentOrder.credit_paise || 0),
-                  ),
-                )}
-              </dd>
-            </div>
-          </dl>
-        </div>
-        <div className="document-signature">
-          <span>Thank you for choosing Feelina.</span>
-          <div>Authorised signatory</div>
+              <div>
+                <dt>Discount</dt>
+                <dd>− {money(documentOrder.discount_paise)}</dd>
+              </div>
+              {settings.tax_mode === "cgst_sgst" ? (
+                <>
+                  <div>
+                    <dt>CGST</dt>
+                    <dd>{money(Math.floor(documentOrder.tax_paise / 2))}</dd>
+                  </div>
+                  <div>
+                    <dt>SGST</dt>
+                    <dd>
+                      {money(
+                        documentOrder.tax_paise -
+                          Math.floor(documentOrder.tax_paise / 2),
+                      )}
+                    </dd>
+                  </div>
+                </>
+              ) : (
+                <div>
+                  <dt>{settings.tax_mode === "igst" ? "IGST" : "Tax"}</dt>
+                  <dd>{money(documentOrder.tax_paise)}</dd>
+                </div>
+              )}
+              <div className="grand-total">
+                <dt>Total</dt>
+                <dd>{money(documentOrder.total_paise)}</dd>
+              </div>
+              <div>
+                <dt>Paid</dt>
+                <dd>{money(documentOrder.paid_paise)}</dd>
+              </div>
+              <div>
+                <dt>Return credits</dt>
+                <dd>{money(documentOrder.credit_paise || 0)}</dd>
+              </div>
+              <div>
+                <dt>Outstanding</dt>
+                <dd>
+                  {money(
+                    Math.max(
+                      0,
+                      documentOrder.total_paise -
+                        documentOrder.paid_paise -
+                        Number(documentOrder.credit_paise || 0),
+                    ),
+                  )}
+                </dd>
+              </div>
+            </dl>
+          </div>
+          <div className="document-signature">
+            <span>Thank you for choosing Feelina.</span>
+            <div>Authorised signatory</div>
+          </div>
         </div>
       </article>
       <div className="no-print detail-actions">
@@ -1482,8 +1484,9 @@ function DocumentMatrix({
         <tr>
           <td colSpan={11}>Total quantity</td>
           <td>{lines.reduce((s, l) => s + l.quantity, 0)}</td>
-          <td />
-          <td>{money(lines.reduce((s, l) => s + l.amount_paise, 0))}</td>
+          <td colSpan={2}>
+            {money(lines.reduce((s, l) => s + l.amount_paise, 0))}
+          </td>
         </tr>
       </tfoot>
     </table>

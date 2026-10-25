@@ -7,7 +7,12 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
-import { configured, supabase, googleSignInUrl } from "../lib/api";
+import {
+  configured,
+  supabase,
+  googleSignInUrl,
+  replaceInitialPassword,
+} from "../lib/api";
 import { Field, ErrorMessage, Submit } from "./ui";
 export function Auth({ onSample }: { onSample: () => void }) {
   const [mode, setMode] = useState<"login" | "register" | "reset">("login");
@@ -276,13 +281,24 @@ export function Auth({ onSample }: { onSample: () => void }) {
     </div>
   );
 }
-export function ResetPassword({ done }: { done: () => void }) {
+export function ResetPassword({
+  done,
+  required = false,
+}: {
+  done: () => void;
+  required?: boolean;
+}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return (
     <div className="center-page">
       <div className="panel auth-form">
-        <h1>Choose a new password</h1>
+        <h1>
+          {required ? "Replace your initial password" : "Choose a new password"}
+        </h1>
+        {required && (
+          <p>Set your own password to unlock your Feelina workspace.</p>
+        )}
         <form
           onSubmit={async (e) => {
             e.preventDefault();
@@ -290,10 +306,22 @@ export function ResetPassword({ done }: { done: () => void }) {
             setError("");
             const f = new FormData(e.currentTarget);
             try {
-              const { error } = await supabase!.auth.updateUser({
-                password: String(f.get("password")),
-              });
-              if (error) throw error;
+              if (f.get("password") !== f.get("confirm_password"))
+                throw new Error("The passwords do not match.");
+              if (
+                new TextEncoder().encode(String(f.get("password"))).length > 72
+              )
+                throw new Error(
+                  "Use a password no longer than 72 UTF-8 bytes.",
+                );
+              if (required)
+                await replaceInitialPassword(String(f.get("password")));
+              else {
+                const { error } = await supabase!.auth.updateUser({
+                  password: String(f.get("password")),
+                });
+                if (error) throw error;
+              }
               done();
             } catch (e) {
               setError((e as Error).message);
@@ -311,8 +339,25 @@ export function ResetPassword({ done }: { done: () => void }) {
               required
             />
           </Field>
+          <Field label="Confirm new password">
+            <input
+              type="password"
+              name="confirm_password"
+              minLength={12}
+              autoComplete="new-password"
+              required
+            />
+          </Field>
           <ErrorMessage error={error} />
           <Submit busy={busy}>Update password</Submit>
+          <button
+            type="button"
+            className="text-button"
+            disabled={busy}
+            onClick={() => void supabase?.auth.signOut()}
+          >
+            Sign out
+          </button>
         </form>
       </div>
     </div>

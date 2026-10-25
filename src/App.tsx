@@ -187,6 +187,8 @@ export default function App() {
         <Busy />
       </div>
     );
+  if (!sample && signedIn && data.profile?.must_change_password)
+    return <ResetPassword required done={() => void reload()} />;
   if (route === "reset-password" && signedIn)
     return (
       <ResetPassword
