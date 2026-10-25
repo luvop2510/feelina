@@ -33,7 +33,7 @@ Supply the owner email, verified business details and the reference invoice; con
 
 ## Deployment
 
-`npm run build` emits `dist`. Vercel settings and security headers live in `vercel.json`. Set the two public Supabase variables in the deployment environment before building. The database is independent of web deployments and is not reset when the site is redeployed. Configure Supabase Auth site URL and approved redirect URLs to the final company domain before email confirmation/recovery is used.
+`npm run build` emits `dist`. Vercel settings and security headers live in `vercel.json`. Set the two public Supabase variables in the deployment environment and set `VITE_SUPABASE_READY=true` only after applying and verifying the migration. Until then live sign-in stays gated and the read-only sample remains accessible. The database is independent of web deployments and is not reset when the site is redeployed. Configure Supabase Auth site URL and approved redirect URLs to the final company domain before email confirmation/recovery is used.
 
 ## Recovery
 

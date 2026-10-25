@@ -2,6 +2,12 @@
 
 This runbook is for the company administrator and its next developer. It is not evidence that backups, recovery or company ownership transfer have already occurred. Deployment identifiers and the live URL belong in the release record maintained by the deploying developer.
 
+## Provisioned project record
+
+The user-selected Supabase project is `ttmrywjzmdfjsvuxgmpr`, owned by the browser account `worldyashvardhan@gmail.com`, region Seoul (`ap-northeast-2`). Use this exact project for production. The Vercel project is `feelina`, ID `prj_Wg2uLGT3CLQjCXHqMlPoNb0kn9tA`, under the existing `yug19` team. `render.yaml` describes a dedicated Render static deployment using the same Supabase backend. The earlier provisioned projects `nyjvoxaffvmhcqefqtoq` and `kxjoqrrxwtoxkkjesdnc` are superseded, have no business records and are not deployment targets. Do not delete them without confirming the owning account and explicit cleanup authorization.
+
+Record the final production URL, deployed commit, applied migration and cloud verification output in the release handover. The initial owner email remains intentionally unassigned until the user supplies it.
+
 ## Before accepting real business orders
 
 1. Obtain the confirmed owner email. Have that person register and verify their email, then grant owner status through trusted project administration using the guarded procedure in `docs/BACKEND.md`. Never publish a bootstrap password or service key.
@@ -26,7 +32,7 @@ npm run build
 npm audit --omit=dev
 ```
 
-Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` (or the exact publishable-key variable in `.env.example`) to a development project's public configuration. Check `.env.example` for the authoritative names. Do not copy production passwords, service-role keys or customer records into a development checkout. Use a separate test project for destructive or adversarial tests.
+Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (or the exact publishable-key variable in `.env.example`) and `VITE_SUPABASE_READY=true` only after migrations and access checks are complete, using a development project's public configuration. Check `.env.example` for the authoritative names. Do not copy production passwords, service-role keys or customer records into a development checkout. Use a separate test project for destructive or adversarial tests.
 
 ## Database changes
 
@@ -43,6 +49,8 @@ When a deploy fails, inspect build logs, reproduce the failed command locally, f
 Proposed business targets: daily encrypted backups, a 24-hour recovery-point target and a 4-hour recovery-time target. These are targets awaiting an actual drill, not measured service guarantees. Keep 30 daily copies in company-controlled off-site storage, subject to the company's agreed retention policy. Restrict decryption/access to named administrators. Monitor backup failures; the presence of a scheduled job is not success.
 
 Supabase recommends regular off-site exports for free-tier projects. Database backups do not preserve storage file contents; copy any future uploaded assets separately. Provider settings, auth redirect/SMTP configuration and hosting variables also need a separate configuration record. See [Supabase backups](https://supabase.com/docs/guides/platform/backups).
+
+The repository also contains `scripts/backup.sh` and `scripts/restore-check.sh`. Until a supported target and successful real restore are recorded, treat these as unverified helpers: a custom archive listing does not establish that managed auth objects and privileges can be restored correctly. Do not use an untested restore helper against production.
 
 ### Logical backup
 

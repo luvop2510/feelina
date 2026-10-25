@@ -1,0 +1,29 @@
+# Dedicated static deployment; business data and authentication stay in the chosen Supabase project.
+services:
+  - type: web
+    name: feelina
+    runtime: static
+    repo: https://github.com/luvop2510/feelina
+    branch: main
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: VITE_SUPABASE_URL
+        value: https://ttmrywjzmdfjsvuxgmpr.supabase.co
+      - key: VITE_SUPABASE_ANON_KEY
+        value: sb_publishable_H4kyO085uXlYX3HBvGQCsA_sO2-LDxr
+      - key: VITE_SUPABASE_READY
+        sync: false
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin

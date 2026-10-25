@@ -28,3 +28,6 @@ Frontend src/lib/api.ts owns exports supabase, configured, loadWorkspace(), save
 
 ## Verification
 Typecheck/build; real PostgreSQL integration tests using PGlite where possible for RLS, role boundaries, rate tampering, quantities, stock, payments and idempotency; browser workflows at desktop/375px, keyboard and print layout. CI runs typecheck, tests, build, audit. No claims of verification without recorded evidence.
+
+## Retry and supply-state extension
+Stock RPCs take a mandatory stable p_request_id UUID: adjust_stock(uuid,integer,text,uuid), dispatch_order(uuid,jsonb,text,uuid), record_return(uuid,jsonb,text,uuid). Payment RPC likewise takes p_request_id. Customer supply_state_code and order place_of_supply_state hold a verified two-digit delivery state code. For configured GST, the server derives IGST vs CGST/SGST using supply state versus issuer GSTIN state; configured tax rate remains business-verified. Invoice issuer is the immutable order settings snapshot. Amounts are capped at 1e12 paise to stay within exact JavaScript integer arithmetic.
