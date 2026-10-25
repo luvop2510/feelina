@@ -17,3 +17,8 @@ jobs:
       - run: npm audit --omit=dev --audit-level=high
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
+        env:
+          # Public test-only configuration; OAuth requests are intercepted by the tests.
+          VITE_SUPABASE_URL: https://feelina-browser-tests.supabase.co
+          VITE_SUPABASE_ANON_KEY: sb_publishable_browser_test_only
+          VITE_SUPABASE_READY: "true"
